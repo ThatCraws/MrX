@@ -1,5 +1,6 @@
 package com.craws.mrx.state;
 
+import com.craws.mrx.graphics.City;
 import com.craws.tree.Edge;
 import com.craws.tree.Node;
 
@@ -14,15 +15,18 @@ import java.util.HashSet;
  */
 public class Place extends com.craws.tree.Node {
 
+    /** The graphical representation of this Place. */
+    private City parent;
     /** The name of the place to be shown to the player */
     private String name;
 
     private HashSet<Route> edges;
 
-    public Place(String name) {
+    public Place(City parent, String name) {
         super();
+        this.parent = parent;
         this.name = name;
-        edges = new HashSet<Route>();
+        edges = new HashSet<>();
     }
 
     /**
@@ -65,6 +69,10 @@ public class Place extends com.craws.tree.Node {
 
     public String getName() {
         return name;
+    }
+
+    public City getParent() {
+        return parent;
     }
 
     public HashSet<Route> getRoutes() {

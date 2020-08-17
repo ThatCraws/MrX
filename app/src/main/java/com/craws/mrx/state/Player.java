@@ -1,5 +1,7 @@
 package com.craws.mrx.state;
 
+import com.craws.mrx.graphics.Figure;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 
@@ -11,6 +13,9 @@ import java.util.HashSet;
  *
  */
 public class Player {
+
+    /** The graphical representation of this Player. */
+    private Figure parent;
     /** The port of a player. Like an ID*/
     private int port;
     /** The player's name*/
@@ -100,17 +105,20 @@ public class Player {
      * @author Julien
      */
     public boolean doTurn(Place target, Ticket ticketUsed) {
+        if(target == null || ticketUsed == null) { return false; }
         for (Route currRoute: getRoutesForTurn()) {
             if(target == currRoute.getTarget() || target == currRoute.getSource()) {
-                if(currRoute.getTicketNeeded().equals(ticketUsed.getVehicle()) && useTicket(ticketUsed)) {
-                    moveTo(target);
-                    return true;
+                if(currRoute.getTicketNeeded().equals(ticketUsed.getVehicle())) {
+                    // different if to make sure the ticket isn't used if given Ticket does not match the needed one
+                    if(useTicket(ticketUsed)) {
+                        moveTo(target);
+                        return true;
+                    }
                 }
             }
         }
         return false;
     }
-
 
     public int getPort() {
         return port;

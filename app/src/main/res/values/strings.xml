@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">MrX</string>
+    <string name="btn_switch_txt">Switch</string>
 </resources>

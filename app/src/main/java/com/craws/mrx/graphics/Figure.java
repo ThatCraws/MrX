@@ -7,23 +7,23 @@ import android.graphics.BitmapFactory;
 import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Player;
 
-public class Detective {
-    private Player detective;
+public class Figure implements Render {
+    private Player player;
 
     private Bitmap bitmap;
 
     private int x;
     private int y;
 
-    public Detective(Context context, int port, String alias, Place startPosition) {
-        detective = new Player(port, alias, startPosition);
+    public Figure(Context context, int port, String alias, Place startPosition) {
+        player = new Player(port, alias, startPosition);
 
         x = 0;
         y = 0;
 
-        switch(detective.getPort()) {
+        switch(player.getPort()) {
             case 0:
-                bitmap = BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det0);
+                bitmap = BitmapFactory.decodeResource(context.getResources(),com.craws.mrx.R.drawable.mrx);
                 break;
             case 1:
                 bitmap = BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det1);
@@ -37,12 +37,25 @@ public class Detective {
             case 4:
                 bitmap = BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det4);
                 break;
+            case 5:
+                bitmap = BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det5);
+                break;
         }
 
     }
 
-    public Player getDetective() {
-        return detective;
+    public void update() {
+        // TODO: Don't teleport. Let the Figure move to the destination.
+        x = player.getCurrPlace().getParent().getX() - (bitmap.getWidth() / 2) + (player.getCurrPlace().getParent().getBitmap().getWidth() / 2);
+        y = player.getCurrPlace().getParent().getY() - (bitmap.getHeight() ) + (player.getCurrPlace().getParent().getBitmap().getHeight() / 2);
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public Bitmap getBitmap() {
+        return bitmap;
     }
 
     public int getX() {
