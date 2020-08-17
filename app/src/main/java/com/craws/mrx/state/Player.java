@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 
 /**
- * The player class saves the current state of the player's character. They travel between the places looking for Mr. X
+ * The player class saves the current state of the player's character and gives basic functionality all players share.
+ * They travel between the places looking for Mr. X (or are Mr. X running from the detectives).
  *
  * @author Julien
  *
@@ -19,11 +20,17 @@ public class Player {
     /** The player's inventory in which he collects his tickets */
     private ArrayList<Ticket> inventory;
 
+    /** Class representing a player (detective as well as Mr. X)
+     *
+     * @param port The port of a player. Like an ID
+     * @param alias The player's name
+     * @param startPosition The starting position/place of the player
+     */
     public Player(int port, String alias, Place startPosition) {
         this.port = port;
         this.alias = alias;
         this.currPlace = startPosition;
-        this.inventory = new ArrayList<Ticket>();
+        this.inventory = new ArrayList<>();
     }
 
     /**
