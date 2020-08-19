@@ -20,9 +20,9 @@ public class PlayerUnitTest {
 
     @BeforeClass
     public static void setUp() {
-        cityA = new Place("Brem");
-        cityB = new Place("Kaffster");
-        cityC = new Place("real Place");
+        cityA = new Place(null, "Brem");
+        cityB = new Place(null, "Kaffster");
+        cityC = new Place(null, "real Place");
 
         cityA.connectTo(cityB, Vehicle.FAST);
         cityB.connectTo(cityC, Vehicle.SLOW);

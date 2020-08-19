@@ -1,8 +1,6 @@
 package com.craws.mrx.state;
 
 import com.craws.mrx.graphics.City;
-import com.craws.tree.Edge;
-import com.craws.tree.Node;
 
 import java.util.HashSet;
 
@@ -13,7 +11,7 @@ import java.util.HashSet;
  * @author Julien
  *
  */
-public class Place extends com.craws.tree.Node {
+public class Place {
 
     /** The graphical representation of this Place. */
     private City parent;
@@ -40,7 +38,7 @@ public class Place extends com.craws.tree.Node {
      * @return The newly created route to connect the places.
      * @author Julien
      */
-    public Edge connectTo(final Place target, final Vehicle ticketNeeded) {
+    public Route connectTo(final Place target, final Vehicle ticketNeeded) {
         Route connection = new Route(this, target, ticketNeeded);
         connectTo(connection);
         target.connectTo(connection);
@@ -58,9 +56,9 @@ public class Place extends com.craws.tree.Node {
      *            The place to be checked for a connection to this one.
      * @author Julien
      */
-    public boolean isConnectedTo(final Node toCheck) {
-        for (Edge currEdge:edges) {
-            if(currEdge.getTarget().equals(toCheck) || currEdge.getSource().equals(toCheck)) {
+    public boolean isConnectedTo(final Place toCheck) {
+        for (Route currEdge:edges) {
+            if(currEdge.getTarget().equals(toCheck) || currEdge.getSrc().equals(toCheck)) {
                 return true;
             }
         }

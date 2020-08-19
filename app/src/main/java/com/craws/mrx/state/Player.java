@@ -16,7 +16,7 @@ public class Player {
 
     /** The graphical representation of this Player. */
     private Figure parent;
-    /** The port of a player. Like an ID*/
+    /** The port of a player. Like an ID. ID 0 is reserved for Mr. X while 1-4 represent the detectives. */
     private int port;
     /** The player's name*/
     private String alias;
@@ -107,7 +107,7 @@ public class Player {
     public boolean doTurn(Place target, Ticket ticketUsed) {
         if(target == null || ticketUsed == null) { return false; }
         for (Route currRoute: getRoutesForTurn()) {
-            if(target == currRoute.getTarget() || target == currRoute.getSource()) {
+            if(target == currRoute.getTarget() || target == currRoute.getSrc()) {
                 if(currRoute.getTicketNeeded().equals(ticketUsed.getVehicle())) {
                     // different if to make sure the ticket isn't used if given Ticket does not match the needed one
                     if(useTicket(ticketUsed)) {
