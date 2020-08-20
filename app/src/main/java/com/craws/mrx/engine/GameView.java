@@ -7,14 +7,17 @@ import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.widget.TextView;
 
 import com.craws.mrx.graphics.City;
 import com.craws.mrx.graphics.Figure;
 import com.craws.mrx.graphics.Render;
 import com.craws.mrx.state.Ability;
+import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Ticket;
 import com.craws.mrx.state.Vehicle;
 
+import java.util.Queue;
 import java.util.Stack;
 
 public class GameView extends SurfaceView implements Runnable {
@@ -53,8 +56,8 @@ public class GameView extends SurfaceView implements Runnable {
     private void startGame(Context context) {
         renderStack = new Stack<>();
 
-        homeCity = new City(context, "Brem", 200, 250);
-        secondCity = new City(context, "Kaffhausen", 450, 500);
+        /**homeCity = new City(context, "Brem", 200, 250);
+        secondCity = new City(context, "Kaffhausen", 1370, 500);
 
         homeCity.getPlace().connectTo(secondCity.getPlace(), Vehicle.MEDIUM);
 
@@ -69,7 +72,7 @@ public class GameView extends SurfaceView implements Runnable {
         renderStack.add(homeCity);
         renderStack.add(secondCity);
         renderStack.add(playerOne);
-
+        */
         surfaceHolder = getHolder();
         paint = new Paint();
     }
@@ -102,7 +105,15 @@ public class GameView extends SurfaceView implements Runnable {
 
             for(Render toRender: renderStack) {
                 canvas.drawBitmap(toRender.getBitmap(), toRender.getX(), toRender.getY(), paint);
+                //if(toRender.getClass().getName().equals("com.craws.mrx.graphics.City")) {
+
+                //}
             }
+
+            // TODO: Implement line drawing between cities
+
+            paint.setTextSize(72);
+            canvas.drawText(String.valueOf(canvas.getWidth()) + "x" + String.valueOf(canvas.getHeight()), 20, 650, paint);
 
             surfaceHolder.unlockCanvasAndPost(canvas);
         }
@@ -133,7 +144,7 @@ public class GameView extends SurfaceView implements Runnable {
         gameThread.start();
     }
 
-    public void switcheroo() {
+    /**public void switcheroo() {
         Ticket medTicketLeft = null;
 
         for(Ticket currTicket: playerOne.getPlayer().getInventory()) {
@@ -148,5 +159,5 @@ public class GameView extends SurfaceView implements Runnable {
         } else {
             playerOne.getPlayer().doTurn(homeCity.getPlace(), medTicketLeft);
         }
-    }
+    } */
 }
