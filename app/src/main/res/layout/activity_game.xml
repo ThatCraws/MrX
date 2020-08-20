@@ -15,7 +15,8 @@
     <com.craws.mrx.engine.GameView
         android:id="@+id/gameView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:foregroundGravity="left|bottom" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -28,6 +29,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/btn_switch_txt" />
+
     </LinearLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>
