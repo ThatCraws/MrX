@@ -3,7 +3,6 @@ package com.craws.mrx.state;
 import com.craws.mrx.graphics.Figure;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 
 /**
  * The player class saves the current state of the player's character and gives basic functionality all players share.
@@ -15,7 +14,7 @@ import java.util.HashSet;
 public class Player {
 
     /** The graphical representation of this Player. */
-    private Figure parent;
+    private Figure graphic;
     /** The port of a player. Like an ID. ID 0 is reserved for Mr. X while 1-4 represent the detectives. */
     private int port;
     /** The player's name*/
@@ -81,17 +80,6 @@ public class Player {
     }
 
     /**
-     * Returns a HashSet of all the routes connecting from the player's current place.
-     *
-     * @return A HashSet of  all the routes connecting from the player's current place.
-     *
-     * @author Julien
-     */
-    public HashSet<Route> getRoutesForTurn() {
-        return currPlace.getRoutes();
-    }
-
-    /**
      * Moves the player to a given place. Checks that the move is valid beforehand though (unlike {@see #moveTo} which is used in this method).
      *
      * @param target
@@ -103,7 +91,7 @@ public class Player {
      *          false, if the move was invalid.
      *
      * @author Julien
-     */
+     *
     public boolean doTurn(Place target, Ticket ticketUsed) {
         if(target == null || ticketUsed == null) { return false; }
         for (Route currRoute: getRoutesForTurn()) {
@@ -118,7 +106,7 @@ public class Player {
             }
         }
         return false;
-    }
+    } */
 
     public int getPort() {
         return port;

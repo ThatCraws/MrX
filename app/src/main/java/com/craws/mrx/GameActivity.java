@@ -12,7 +12,7 @@ import com.craws.mrx.engine.GameView;
 public class GameActivity extends AppCompatActivity {
 
     private GameView gameView;
-    private Button switchBtn;
+    //private Button switchBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,13 +22,13 @@ public class GameActivity extends AppCompatActivity {
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
         gameView = (GameView)findViewById(R.id.gameView);
-        switchBtn = (Button)findViewById(R.id.btn_switch);
+        //switchBtn = (Button)findViewById(R.id.btn_switch);
 
-        switchBtn.setOnClickListener(new View.OnClickListener() {
+        /**switchBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 gameView.switcheroo();
             }
-        });
+        }); */
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.craws.mrx.state;
 
+import com.craws.tree.Edge;
+
 /**
  * The routes connect the places. The Players will need a ticket for the right vehicle.
  *
@@ -7,26 +9,11 @@ package com.craws.mrx.state;
  *
  */
 public class Route {
-    /** The source Place/node the Route originates from */
-    private Place src;
-    /** The destination Place/node the Route goes to */
-    private Place target;
-
     /** The ticket needed to travel this route. Should be chosen depending on the length of the route. */
     private Vehicle ticketNeeded;
 
-    public Route(Place src, Place target, Vehicle ticketNeeded) {
-        this.src = src;
-        this.target = target;
+    public Route(Vehicle ticketNeeded) {
         this.ticketNeeded = ticketNeeded;
-    }
-
-    public Place getSrc() {
-        return src;
-    }
-
-    public Place getTarget() {
-        return target;
     }
 
     public Vehicle getTicketNeeded() {

@@ -14,6 +14,9 @@ public class City implements Render {
     private int x;
     private int y;
 
+    private  int width = 80;
+    private  int height = 40;
+
     public City(Context context, String name, int x, int y) {
         place = new Place(this, name);
 
@@ -21,6 +24,7 @@ public class City implements Render {
         this.y = y;
 
         bitmap = BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.city);
+        bitmap = Bitmap.createScaledBitmap(bitmap, width, height, false);
     }
 
     public void update() {
