@@ -59,7 +59,7 @@ public class GameView extends SurfaceView implements Runnable {
 
         GameState state = new GameState();
 
-        /**homeCity = new City(context, "Brem", 200, 250);
+        /*homeCity = new City(context, "Brem", 200, 250);
         secondCity = new City(context, "Kaffhausen", 1370, 500);
 
         homeCity.getPlace().connectTo(secondCity.getPlace(), Vehicle.MEDIUM);
@@ -116,7 +116,7 @@ public class GameView extends SurfaceView implements Runnable {
             // TODO: Implement line drawing between cities
 
             paint.setTextSize(72);
-            canvas.drawText(String.valueOf(canvas.getWidth()) + "x" + String.valueOf(canvas.getHeight()), 20, 650, paint);
+            canvas.drawText(canvas.getWidth() + "x" + canvas.getHeight(), 20, 650, paint);
 
             surfaceHolder.unlockCanvasAndPost(canvas);
         }
@@ -147,7 +147,7 @@ public class GameView extends SurfaceView implements Runnable {
         gameThread.start();
     }
 
-    /**public void switcheroo() {
+    /*public void switcheroo() {
         Ticket medTicketLeft = null;
 
         for(Ticket currTicket: playerOne.getPlayer().getInventory()) {
