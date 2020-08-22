@@ -13,6 +13,7 @@ import com.craws.mrx.graphics.City;
 import com.craws.mrx.graphics.Figure;
 import com.craws.mrx.graphics.Render;
 import com.craws.mrx.state.Ability;
+import com.craws.mrx.state.GameState;
 import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Ticket;
 import com.craws.mrx.state.Vehicle;
@@ -55,6 +56,8 @@ public class GameView extends SurfaceView implements Runnable {
 
     private void startGame(Context context) {
         renderStack = new Stack<>();
+
+        GameState state = new GameState();
 
         /**homeCity = new City(context, "Brem", 200, 250);
         secondCity = new City(context, "Kaffhausen", 1370, 500);

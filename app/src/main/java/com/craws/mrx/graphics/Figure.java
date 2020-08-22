@@ -54,8 +54,8 @@ public class Figure implements Render {
 
     public void update() {
         // TODO: Don't teleport. Let the Figure move to the destination.
-        x = player.getCurrPlace().getGraphic().getX() - (bitmap.getWidth() / 2) + (player.getCurrPlace().getGraphic().getBitmap().getWidth() / 2);
-        y = player.getCurrPlace().getGraphic().getY() - (bitmap.getHeight() ) + (player.getCurrPlace().getGraphic().getBitmap().getHeight() / 2);
+        // x = player.getCurrPlace().getGraphic().getX() - (bitmap.getWidth() / 2) + (player.getCurrPlace().getGraphic().getBitmap().getWidth() / 2);
+        // y = player.getCurrPlace().getGraphic().getY() - (bitmap.getHeight() ) + (player.getCurrPlace().getGraphic().getBitmap().getHeight() / 2);
     }
 
     public Player getPlayer() {

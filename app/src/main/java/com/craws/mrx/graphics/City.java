@@ -7,7 +7,6 @@ import android.graphics.BitmapFactory;
 import com.craws.mrx.state.Place;
 
 public class City implements Render {
-    private Place place;
 
     private Bitmap bitmap;
 
@@ -17,8 +16,7 @@ public class City implements Render {
     private  int width = 80;
     private  int height = 40;
 
-    public City(Context context, String name, int x, int y) {
-        place = new Place(this, name);
+    public City(Context context, int x, int y) {
 
         this.x = x;
         this.y = y;
@@ -28,10 +26,6 @@ public class City implements Render {
     }
 
     public void update() {
-    }
-
-    public Place getPlace() {
-        return place;
     }
 
     public Bitmap getBitmap() {

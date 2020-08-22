@@ -117,6 +117,23 @@ public class Tree<U, V> {
     }
 
     /**
+     * Returns the index associated with the node with the given data.
+     *
+     * @param theData
+     *            The data to look for in the Nodes.
+     * @return The index of the given node or -1, if it couldn't be found.
+     * @author Julien
+     */
+    public int getIndexByData(final U theData) {
+        for (int currIndex = 0 ; currIndex < nodes.size() ; currIndex++) {
+            if (nodes.get(currIndex).getData().equals(theData)) {
+                return currIndex;
+            }
+        }
+        return -1;
+    }
+
+    /**
      * Returns the data of the Edge connecting the Nodes represented by the given indices.
      *
      * @param src
@@ -184,16 +201,6 @@ public class Tree<U, V> {
     }
 
     /**
-     * Checks whether the tree is empty or not.
-     *
-     * @return true, if no Nodes or Edges were inserted into the Tree so far.
-     * @author Julien
-     */
-    public boolean isEmpty() {
-        return nodes.size() == 0 && edges.size() == 0;
-    }
-
-    /**
      * Returns a Vector containing all Nodes adjacent to the Node represented by the given index.
      *
      * @param node
@@ -222,6 +229,16 @@ public class Tree<U, V> {
             }
         }
         return toRet;
+    }
+
+    /**
+     * Checks whether the tree is empty or not.
+     *
+     * @return true, if no Nodes or Edges were inserted into the Tree so far.
+     * @author Julien
+     */
+    public boolean isEmpty() {
+        return nodes.size() == 0 && edges.size() == 0;
     }
 
     // ----------- GETTERS -----------
