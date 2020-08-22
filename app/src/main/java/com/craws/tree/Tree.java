@@ -71,9 +71,18 @@ public class Tree<U, V> {
             return srcNode.getConnectionTo(targetNode);
         }
 
-        return srcNode.connectTo(targetNode, data);
+        Edge<U, V> newEdge = srcNode.connectTo(targetNode, data);
+        edges.add(newEdge);
+        return newEdge;
     }
 
+    public void removeEdge() {
+        // TODO: Implement
+    }
+
+    public void removeNode() {
+        // TODO: Implement
+    }
 
     /**
      * Checks whether two Nodes are connected by an Edge.
@@ -218,17 +227,8 @@ public class Tree<U, V> {
             e.printStackTrace();
             return null;
         }
-        // Collect all connected Nodes
-        Vector<Node<U, V>> toRet = new Vector<>();
-        for(Edge<U, V> currEdge: theNode.getEdges()) {
-            // Don't add the given Node
-            if(theNode.equals(currEdge.getSource())) {
-                toRet.add(currEdge.getTarget());
-            } else {
-                toRet.add(currEdge.getSource());
-            }
-        }
-        return toRet;
+
+        return theNode.getAdjacentNodes();
     }
 
     /**
