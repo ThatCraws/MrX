@@ -50,6 +50,7 @@ public class GameState {
 
     private void setup() {
         players = new Vector<>();
+
         bagOfTickets = new Vector<>();
 
         timeline = new Timeline();
@@ -59,7 +60,7 @@ public class GameState {
 
         fillTicketBag();
 
-        port = 0;
+        port = 1;
 
         startFields = new Vector<>();
         startFieldsX = new Vector<>();
@@ -130,10 +131,32 @@ public class GameState {
     }
 
     /**
-     * Creates a detective and adds them to the player-collection
+     * Creates a Mr. X.
+     *
+     * @param startPosition The place Mr. X starts/spawns on.
+     *
+     * @see GameState#addDetective(String, Place)
+     * @see GameState#addDetective(String)
+     *
+     * @author Julien
+     *
+     */
+    public void addMrX(final Place startPosition) {
+        mrX = new Player(0, "Mr. X", startPosition);
+    }
+
+    public  void addMrX() {
+        mrX = new Player(0, "MrX", getRandomFromVec(startFieldsX));
+    }
+
+    /**
+     * Creates a detective and adds them to the player-collection.
      *
      * @param alias The user-displayable name of the detective
-     * @param startPosition The place the detective starts/spawns on. Should be subset of the startFields-Vector or null. Default: null
+     * @param startPosition The place the detective starts/spawns on.
+     *
+     * @see GameState#addMrX(Place) 
+     * @see GameState#addMrX()
      *
      * @author Julien
      *
