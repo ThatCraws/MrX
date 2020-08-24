@@ -1,6 +1,7 @@
 package com.craws.tree;
 
 import java.util.HashSet;
+import java.util.Vector;
 
 /**
  * The node of a (directed) graph. Does not contain data yet, but is meant to be derived and given a data-field that way.
@@ -41,6 +42,47 @@ public class Node<U, V> {
     }
 
     /**
+     * Removes the Edge connecting the given node to this one from the edge-Collection for this note and the connected one.
+     * The Edge will be removed by the GC, if no other references exist.
+     *
+     * @param toDisconnect
+     *            The node to be disconnected.
+     * @throws IllegalArgumentException If the given Node is the Node this method is called from.
+     * @author Julien
+     */
+    private void disconnectFrom(final Node<U, V> toDisconnect) {
+        if(toDisconnect.equals(this)) {
+            throw new IllegalArgumentException("Tried to disconnect Node from itself.");
+        }
+        for(Edge<U, V> currEdge: edges) {
+            if(currEdge.getSource().equals(toDisconnect)) {
+                currEdge.getSource().removeEdge(currEdge);
+                removeEdge(currEdge);
+                return;
+            } else if(currEdge.getTarget().equals(toDisconnect)) {
+                currEdge.getTarget().removeEdge(currEdge);
+                removeEdge(currEdge);
+                return;
+            }
+        }
+    }
+
+    private void removeEdge(Edge<U, V> toRemove) {
+        edges.remove(toRemove);
+    }
+
+    /**
+     * Checks if a given node is connected directly to this one via an edge.
+     *
+     * @param toCheck
+     *            The node to be checked for a connection to this one.
+     * @author Julien
+     */
+    public boolean isConnectedTo(final Node<U, V> toCheck) {
+        return getConnectionTo(toCheck) != null;
+    }
+
+    /**
      * Returns the Edge connecting the given node to this one.
      *
      * @param toCheck
@@ -60,22 +102,20 @@ public class Node<U, V> {
         return null;
     }
 
-    /**
-     * Checks if a given node is connected directly to this one via an edge.
-     *
-     * @param toCheck
-     *            The node to be checked for a connection to this one.
-     * @author Julien
-     */
-    public boolean isConnectedTo(final Node<U, V> toCheck) {
-        return getConnectionTo(toCheck) != null;
+    public Vector<Node<U, V>> getAdjacentNodes() {
+        Vector<Node<U, V>> toRet = new Vector<>();
+        for (Edge<U, V> currEdge : edges) {
+            // Don't add this Node
+            if (!currEdge.getSource().equals(this)) {
+                toRet.add(currEdge.getSource());
+            } else {
+                toRet.add(currEdge.getTarget());
+            }
+        }
+        return toRet;
     }
 
     public U getData() {
         return data;
-    }
-
-    public HashSet<Edge<U, V>> getEdges() {
-        return edges;
     }
 }

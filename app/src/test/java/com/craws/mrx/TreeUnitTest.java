@@ -1,7 +1,6 @@
 package com.craws.mrx;
 
 import com.craws.mrx.state.Place;
-import com.craws.mrx.state.Route;
 import com.craws.mrx.state.Vehicle;
 import com.craws.tree.Tree;
 
@@ -14,7 +13,7 @@ import static org.junit.Assert.assertTrue;
 
 public class TreeUnitTest {
 
-    Tree<Place, Route> theWorld;
+    Tree<Place, Vehicle> theWorld;
 
     Place placeA;
     Place placeB;
@@ -22,9 +21,9 @@ public class TreeUnitTest {
 
     @Before
     public void setUp() {
-        placeA = new Place(null, "Place A");
-        placeB = new Place(null, "Place B");
-        placeC = new Place(null, "Place C");
+        placeA = new Place("Place A");
+        placeB = new Place("Place B");
+        placeC = new Place("Place C");
 
         theWorld = new Tree<>(placeA);
     }
@@ -34,10 +33,10 @@ public class TreeUnitTest {
     public void testConnectPlaces() {
         int rootIndex = theWorld.getIndexByNode(theWorld.getRoot());
         int placeBIndex = theWorld.insertNode(placeB);
-        theWorld.insertEdge(rootIndex, placeBIndex, new Route(Vehicle.MEDIUM));
+        theWorld.insertEdge(rootIndex, placeBIndex, Vehicle.MEDIUM);
 
         int placeCIndex = theWorld.insertNode(placeC);
-        theWorld.insertEdge(placeBIndex, placeCIndex, new Route(Vehicle.FAST));
+        theWorld.insertEdge(placeBIndex, placeCIndex, Vehicle.FAST);
 
         assertTrue(theWorld.isConnected(rootIndex, placeBIndex));
 
@@ -51,8 +50,8 @@ public class TreeUnitTest {
         assertFalse(theWorld.isConnected(rootIndex, placeCIndex));
         assertFalse(theWorld.isConnected(placeCIndex, rootIndex));
 
-        assertEquals(1, theWorld.getNode(rootIndex).getEdges().size());
-        assertEquals(2, theWorld.getNode(placeBIndex).getEdges().size());
-        assertEquals(1, theWorld.getNode(placeCIndex).getEdges().size());
+        assertEquals(1, theWorld.getAdjacentNodes(rootIndex).size());
+        assertEquals(2, theWorld.getAdjacentNodes(placeBIndex).size());
+        assertEquals(1, theWorld.getAdjacentNodes(placeCIndex).size());
     }
 }

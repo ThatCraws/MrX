@@ -16,7 +16,6 @@ import com.craws.mrx.state.Ability;
 import com.craws.mrx.state.GameState;
 import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Ticket;
-import com.craws.mrx.state.Vehicle;
 
 import java.util.Queue;
 import java.util.Stack;
@@ -59,23 +58,7 @@ public class GameView extends SurfaceView implements Runnable {
 
         GameState state = new GameState();
 
-        /*homeCity = new City(context, "Brem", 200, 250);
-        secondCity = new City(context, "Kaffhausen", 1370, 500);
 
-        homeCity.getPlace().connectTo(secondCity.getPlace(), Vehicle.MEDIUM);
-
-        playerOne = new Figure(context, 0, "Earl", homeCity.getPlace());
-
-        medTicket = new Ticket(Vehicle.MEDIUM, Ability.SPECIAL);
-        medTicketTwo = new Ticket(Vehicle.MEDIUM, Ability.SPECIAL);
-
-        playerOne.getPlayer().giveTicket(medTicket);
-        playerOne.getPlayer().giveTicket(medTicketTwo);
-
-        renderStack.add(homeCity);
-        renderStack.add(secondCity);
-        renderStack.add(playerOne);
-        */
         surfaceHolder = getHolder();
         paint = new Paint();
     }
@@ -108,15 +91,8 @@ public class GameView extends SurfaceView implements Runnable {
 
             for(Render toRender: renderStack) {
                 canvas.drawBitmap(toRender.getBitmap(), toRender.getX(), toRender.getY(), paint);
-                //if(toRender.getClass().getName().equals("com.craws.mrx.graphics.City")) {
 
-                //}
             }
-
-            // TODO: Implement line drawing between cities
-
-            paint.setTextSize(72);
-            canvas.drawText(canvas.getWidth() + "x" + canvas.getHeight(), 20, 650, paint);
 
             surfaceHolder.unlockCanvasAndPost(canvas);
         }
@@ -146,21 +122,4 @@ public class GameView extends SurfaceView implements Runnable {
         gameThread = new Thread(this);
         gameThread.start();
     }
-
-    /*public void switcheroo() {
-        Ticket medTicketLeft = null;
-
-        for(Ticket currTicket: playerOne.getPlayer().getInventory()) {
-            if(currTicket.getVehicle() == Vehicle.MEDIUM) {
-                medTicketLeft = currTicket;
-                break;
-            }
-        }
-
-        if(playerOne.getPlayer().getCurrPlace().equals(homeCity.getPlace())) {
-            playerOne.getPlayer().doTurn(secondCity.getPlace(), medTicketLeft);
-        } else {
-            playerOne.getPlayer().doTurn(homeCity.getPlace(), medTicketLeft);
-        }
-    } */
 }

@@ -27,4 +27,8 @@ public class Place {
     public String getName() {
         return name;
     }
+
+    public boolean isGoal() {
+        return goal;
+    }
 }

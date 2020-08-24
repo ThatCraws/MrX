@@ -19,11 +19,11 @@ public class Player {
     /** The current place the player resides in */
     private Place place;
 
-    /** Class representing a player (detective as well as Mr. X)
+    /** Constructor for creating a new Player
      *
      * @param port The port of a player. Like an ID
      * @param alias The player's name
-     * @param startPosition The starting position/place of the player
+     * @param startPosition The starting position/place of the player (optional, default value: null)
      */
     public Player(int port, String alias, Place startPosition) {
         this.port = port;
