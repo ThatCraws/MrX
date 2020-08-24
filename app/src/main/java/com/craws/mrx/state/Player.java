@@ -1,9 +1,5 @@
 package com.craws.mrx.state;
 
-import com.craws.mrx.graphics.Figure;
-
-import java.util.ArrayList;
-
 /**
  * The player class saves the current state of the player's character and gives basic functionality all players share.
  * They travel between the places looking for Mr. X (or are Mr. X running from the detectives).

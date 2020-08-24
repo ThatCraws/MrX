@@ -14,7 +14,7 @@ public class Edge<U, V> {
     /** Represents the destination node of the edge*/
     private final Node<U, V> target;
 
-    /** Holds the data held/represented by the edge (yeah, I know...) TODO: Find a solution that does not suck major ballz */
+    /** Holds the data held/represented by the edge*/
     private final V data;
 
     /**
