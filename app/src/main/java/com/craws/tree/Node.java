@@ -1,5 +1,7 @@
 package com.craws.tree;
 
+import androidx.annotation.NonNull;
+
 import java.util.HashSet;
 import java.util.Vector;
 
@@ -30,7 +32,7 @@ public class Node<U, V> {
      * @return The newly created edge to connect the nodes.
      * @author Julien
      */
-    public Edge<U, V> connectTo(final Node<U, V> target, final V data) {
+    public Edge<U, V> connectTo(@NonNull final Node<U, V> target, final V data) {
         Edge<U, V> connection = new Edge<>(this, target, data);
         connectTo(connection);
         target.connectTo(connection);
@@ -50,7 +52,7 @@ public class Node<U, V> {
      * @throws IllegalArgumentException If the given Node is the Node this method is called from.
      * @author Julien
      */
-    private void disconnectFrom(final Node<U, V> toDisconnect) {
+    private void disconnectFrom(@NonNull final Node<U, V> toDisconnect) {
         if(toDisconnect.equals(this)) {
             throw new IllegalArgumentException("Tried to disconnect Node from itself.");
         }
@@ -90,7 +92,7 @@ public class Node<U, V> {
      * @return The Edge connecting the given node to this one or null if they are not connected.
      * @author Julien
      */
-    public Edge<U, V> getConnectionTo(final Node<U, V> toCheck) {
+    public Edge<U, V> getConnectionTo(@NonNull final Node<U, V> toCheck) {
         if(toCheck.equals(this)) {
             throw new IllegalArgumentException("The nodes to check for connection must not be the same.");
         }

@@ -2,6 +2,8 @@ package com.craws.mrx.state;
 
 import android.content.Context;
 
+import androidx.annotation.NonNull;
+
 import com.craws.tree.Node;
 import com.craws.tree.Tree;
 
@@ -168,7 +170,7 @@ public class GameState {
      * @author Julien
      *
      */
-    public boolean doMove(final Player toMove, final Place destination, Ticket toUse) {
+    public boolean doMove(@NonNull final Player toMove, final Place destination, Ticket toUse) {
         Vector<Ticket> theInventory;
 
         // whose inventory to get the Ticket from
@@ -208,26 +210,30 @@ public class GameState {
     }
 
     /**
-     * Reliefs players from the tickets necessary to activate the extra-turn ability
-     * The double-turn will be realised via two calls of doTurn() for Mr. X or the doFreeTurn() for the detective(s).
+     * Reliefs players from the tickets necessary to activate the given ability.
+     * The specific ability's effects will have to be done after calling this method.
+     * via two calls of doTurn() for Mr. X or the doFreeTurn() for the detective(s).
      *
      * @param player The player activating his ability. Will only be used to differentiate between Mr. X and detectives.
      * @param ticketsUsed A vector containing the tickets to be used for the "extra turn"-ability
+     * @param toActivate The
      *
      * @return True, if the tickets were successfully removed from the inventory.
      *      False,  if the wrong number of tickets were given via the Vector,
-     *              if one of the tickets in the given Vector is not in the inventory.
+     *              if one of the tickets in the given Vector is not in the inventory,
+     *              if one of the tickets is not for the "extra turn"-ability.
      *
+     * @see com.craws.mrx.state.GameState#doFreeTurn(Player, Place)
      * @author Julien
      *
      */
-    public boolean activateExtraTurn(Player player, Vector<Ticket> ticketsUsed) {
+    public boolean activateAbility(@NonNull final Player player, final Vector<Ticket> ticketsUsed, Ability toActivate) {
         if (player.getPort() == 0) {
             if(ticketsUsed.size() != 3) {
                 return false;
             }
-            for(Ticket currTicket: inventoryX) {
-                if(!ticketsUsed.contains(currTicket)) {
+            for(Ticket currTicket: ticketsUsed) {
+                if(!inventoryX.contains(currTicket) || currTicket.getAbility() != toActivate) {
                     return false;
                 }
             }
@@ -240,7 +246,7 @@ public class GameState {
                 return false;
             }
             for(Ticket currTicket: inventory) {
-                if(!ticketsUsed.contains(currTicket)) {
+                if(!ticketsUsed.contains(currTicket) || currTicket.getAbility() != toActivate) {
                     return false;
                 }
             }
@@ -252,9 +258,49 @@ public class GameState {
     }
 
     /**
+     * Moves the player to an adjacent Place without the need to use a Ticket.
+     * @param player The player to be moved for free.
+     * @param destination The destination place to let the player go to.
+     */
+    public void doFreeTurn(@NonNull final Player player, final Place destination) {
+        if(map.isConnected(map.getIndexByData(player.getPlace()), map.getIndexByData(destination))) {
+            player.setPlace(destination);
+        }
+    }
+
+    /**
+     * Gives a free ticket to a given player
+     * @param player The Player to receive the ticket. This is only for differentiating between Mr. X and detectives.
+     * @param toGive The Ticket to give to the specified Player.
+     */
+    public void giveTicket(@NonNull final Player player, final Ticket toGive) {
+        if(player.getPort() == 0) {
+            inventoryX.add(toGive);
+        } else {
+            inventory.add(toGive);
+        }
+    }
+
+    /**
+     * Removes a ticket from a given player
+     * @param player The Player to take the ticket from. This is only for differentiating between Mr. X and detectives.
+     * @param toTake The Ticket to take from the specified Player.
+     *
+     * @return True, if a Ticket was successfully removed from an inventory.
+     *          False, if the Ticket was not present in the Inventory to begin with.
+     */
+    public boolean takeTicket(@NonNull final Player player, final Ticket toTake) {
+        if(player.getPort() == 0) {
+            return inventoryX.remove(toTake);
+        } else {
+            return inventory.remove(toTake);
+        }
+    }
+
+    /**
      * Returns the player corresponding to the given port.
      *
-     * @param port The port of the player to return (0: Mr. X; 1+: Detectives)
+     * @param port The port of the player to return (0: Mr. X; 1+: Detectives).
      *
      * @return The Player-Object with the given port.
      *
@@ -280,7 +326,7 @@ public class GameState {
      * @author Julien
      *
      */
-    private <T> T getRandomFromVec(Vector<T> theVec) {
+    private <T> T getRandomFromVec(@NonNull Vector<T> theVec) {
         return theVec.get((int)(Math.random()*theVec.size() - 1));
     }
 
