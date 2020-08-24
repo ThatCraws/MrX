@@ -2,6 +2,12 @@ package com.craws.tree;
 
 import java.util.Vector;
 
+/**
+ * Represents a Tree and supplies methods to manage and retrieve information from the Nodes and Edges.
+ *
+ * @author Julien
+ *
+ */
 public class Tree<U, V> {
     private Node<U, V> root;
 

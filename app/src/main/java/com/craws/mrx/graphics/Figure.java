@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
-import com.craws.mrx.R;
 import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Player;
 

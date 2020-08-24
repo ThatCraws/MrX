@@ -1,12 +1,10 @@
 package com.craws.tree;
 
-import androidx.annotation.NonNull;
-
 import java.util.HashSet;
 import java.util.Vector;
 
 /**
- * The node of a (directed) graph. Does not contain data yet, but is meant to be derived and given a data-field that way.
+ * The node of a (directed) graph. Can hold any data-type assigned by the user.
  *
  * @author Julien
  *
@@ -18,6 +16,11 @@ public class Node<U, V> {
     /** Collects all the edges coming from this node */
     private HashSet<Edge<U, V>> edges;
 
+    /**
+     * A Node holds data assigned by the user. Connect to other Nodes via Edge by calling the connectTo()-Method (from the source-node for directed graphs)
+     * @param data The data to assign to this Node.
+     * @see Node#connectTo(Node, Object)
+     */
     public Node(U data) {
         this.data = data;
         edges = new HashSet<>();
@@ -29,10 +32,12 @@ public class Node<U, V> {
      *
      * @param target
      *            The node to connect this one to.
+     * @param data The data to give the newly created Edge to hold.
+     *
      * @return The newly created edge to connect the nodes.
      * @author Julien
      */
-    public Edge<U, V> connectTo(@NonNull final Node<U, V> target, final V data) {
+    public Edge<U, V> connectTo(final Node<U, V> target, final V data) {
         Edge<U, V> connection = new Edge<>(this, target, data);
         connectTo(connection);
         target.connectTo(connection);
@@ -52,7 +57,7 @@ public class Node<U, V> {
      * @throws IllegalArgumentException If the given Node is the Node this method is called from.
      * @author Julien
      */
-    private void disconnectFrom(@NonNull final Node<U, V> toDisconnect) {
+    private void disconnectFrom(final Node<U, V> toDisconnect) {
         if(toDisconnect.equals(this)) {
             throw new IllegalArgumentException("Tried to disconnect Node from itself.");
         }
@@ -78,6 +83,10 @@ public class Node<U, V> {
      *
      * @param toCheck
      *            The node to be checked for a connection to this one.
+     *
+     * @return True, if the given Node is directly connected to this one via an Edge
+     *          False, if not.
+     *
      * @author Julien
      */
     public boolean isConnectedTo(final Node<U, V> toCheck) {
@@ -92,7 +101,7 @@ public class Node<U, V> {
      * @return The Edge connecting the given node to this one or null if they are not connected.
      * @author Julien
      */
-    public Edge<U, V> getConnectionTo(@NonNull final Node<U, V> toCheck) {
+    public Edge<U, V> getConnectionTo(final Node<U, V> toCheck) {
         if(toCheck.equals(this)) {
             throw new IllegalArgumentException("The nodes to check for connection must not be the same.");
         }

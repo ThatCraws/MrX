@@ -1,9 +1,5 @@
 package com.craws.mrx.state;
 
-import android.content.Context;
-
-import androidx.annotation.NonNull;
-
 import com.craws.tree.Node;
 import com.craws.tree.Tree;
 
@@ -155,7 +151,7 @@ public class GameState {
      * @param alias The user-displayable name of the detective
      * @param startPosition The place the detective starts/spawns on.
      *
-     * @see GameState#addMrX(Place) 
+     * @see GameState#addMrX(Place)
      * @see GameState#addMrX()
      *
      * @author Julien
@@ -193,7 +189,7 @@ public class GameState {
      * @author Julien
      *
      */
-    public boolean doMove(@NonNull final Player toMove, final Place destination, Ticket toUse) {
+    public boolean doMove(final Player toMove, final Place destination, Ticket toUse) {
         Vector<Ticket> theInventory;
 
         // whose inventory to get the Ticket from
@@ -250,7 +246,7 @@ public class GameState {
      * @author Julien
      *
      */
-    public boolean activateAbility(@NonNull final Player player, final Vector<Ticket> ticketsUsed, Ability toActivate) {
+    public boolean activateAbility(final Player player, final Vector<Ticket> ticketsUsed, Ability toActivate) {
         if (player.getPort() == 0) {
             if(ticketsUsed.size() != 3) {
                 return false;
@@ -285,7 +281,7 @@ public class GameState {
      * @param player The player to be moved for free.
      * @param destination The destination place to let the player go to.
      */
-    public void doFreeTurn(@NonNull final Player player, final Place destination) {
+    public void doFreeTurn(final Player player, final Place destination) {
         if(map.isConnected(map.getIndexByData(player.getPlace()), map.getIndexByData(destination))) {
             player.setPlace(destination);
         }
@@ -296,7 +292,7 @@ public class GameState {
      * @param player The Player to receive the ticket. This is only for differentiating between Mr. X and detectives.
      * @param toGive The Ticket to give to the specified Player.
      */
-    public void giveTicket(@NonNull final Player player, final Ticket toGive) {
+    public void giveTicket(final Player player, final Ticket toGive) {
         if(player.getPort() == 0) {
             inventoryX.add(toGive);
         } else {
@@ -312,7 +308,7 @@ public class GameState {
      * @return True, if a Ticket was successfully removed from an inventory.
      *          False, if the Ticket was not present in the Inventory to begin with.
      */
-    public boolean takeTicket(@NonNull final Player player, final Ticket toTake) {
+    public boolean takeTicket(final Player player, final Ticket toTake) {
         if(player.getPort() == 0) {
             return inventoryX.remove(toTake);
         } else {
@@ -349,7 +345,7 @@ public class GameState {
      * @author Julien
      *
      */
-    private <T> T getRandomFromVec(@NonNull Vector<T> theVec) {
+    private <T> T getRandomFromVec(Vector<T> theVec) {
         return theVec.get((int)(Math.random()*theVec.size() - 1));
     }
 
