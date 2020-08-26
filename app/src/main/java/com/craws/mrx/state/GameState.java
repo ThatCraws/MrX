@@ -1,6 +1,5 @@
 package com.craws.mrx.state;
 
-import com.craws.tree.Node;
 import com.craws.tree.Tree;
 
 import java.util.Vector;
@@ -17,8 +16,6 @@ public class GameState {
     /* ------ The playing field ------ */
     // The game map will be represented by a Tree consisting of the Places(Structural: Node, Graphical: City) and Routes(Structural: Edge, Graphical: A Line).
     private Tree<Place, Vehicle> map;
-    private Vector<Place> startFields;
-    private Vector<Place> startFieldsX;
 
     /* ------ The tickets (Vehicle/Ability) ------ */
     // A simulated bag of tickets. Tickets will be drawn on random from here.
@@ -31,11 +28,6 @@ public class GameState {
 
     public GameState() {
         map = new Tree<>();
-        setup();
-    }
-
-    public GameState(final Node<Place, Vehicle> firstNode) {
-        map = new Tree<>(firstNode);
         setup();
     }
 
@@ -57,11 +49,6 @@ public class GameState {
         fillTicketBag();
 
         port = 1;
-
-        startFields = new Vector<>();
-        startFieldsX = new Vector<>();
-
-        dealTickets();
     }
 
     private void fillTicketBag() {
@@ -77,21 +64,6 @@ public class GameState {
         }
     }
 
-    private void dealTickets() {
-        Ticket randoTicket;
-        while(inventoryX.size() < 8) {
-            randoTicket = getRandomFromVec(bagOfTickets);
-            inventoryX.add(randoTicket);
-            inventoryX.remove(randoTicket);
-        }
-
-        while(inventory.size() < (4 + players.size())) {
-            randoTicket = getRandomFromVec(bagOfTickets);
-            inventoryX.add(randoTicket);
-            inventoryX.remove(randoTicket);
-        }
-    }
-
     /**
      * Builds a place in the map. Meaning adding a node to the map that represents the playing field.
      * Connections between Places can be made via buildStreet().
@@ -100,8 +72,10 @@ public class GameState {
      * @author Julien
      *
      */
-    public void buildPlace(final String name) {
-        map.insertNode(new Place(name));
+    public Place buildPlace(final String name) {
+        Place newPlace = new Place(name);
+        map.insertNode(newPlace);
+        return newPlace;
     }
 
     /**
@@ -109,15 +83,15 @@ public class GameState {
      * Nodes can be added via buildPlace().
      *
      * @param start The starting point of the street (starting and ending points do not matter and are just internally managed this way)
-     * @param end The ending point of the street (starting and ending points do not matter and are just internally managed this way)
+     * @param destination The ending point of the street (starting and ending points do not matter and are just internally managed this way)
      * @param ticketNeeded The Ticket needed to travel this street
      *
      * @author Julien
      *
      */
-    public void buildStreet(final Place start, final Place end, final Vehicle ticketNeeded) {
+    public void buildStreet(final Place start, final Place destination, final Vehicle ticketNeeded) {
         final int startIndex = map.getIndexByData(start);
-        final int endIndex = map.getIndexByData(end);
+        final int endIndex = map.getIndexByData(destination);
 
         if(startIndex == -1 || endIndex == -1 ) {
             return;
@@ -134,15 +108,20 @@ public class GameState {
      * @see GameState#addDetective(String, Place)
      * @see GameState#addDetective(String)
      *
+     * @return The port of Mr. X, whic is always 0 (just for consistence with the addDetective()-method.
+     * @see GameState#addDetective(String, Place)
+     * @see GameState#addDetective(String)
+     * 
      * @author Julien
      *
      */
-    public void addMrX(final Place startPosition) {
+    public int addMrX(final Place startPosition) {
         mrX = new Player(0, "Mr. X", startPosition);
+        return 0;
     }
 
     public  void addMrX() {
-        mrX = new Player(0, "MrX", getRandomFromVec(startFieldsX));
+        mrX = new Player(0, "MrX", null);
     }
 
     /**
@@ -154,22 +133,24 @@ public class GameState {
      * @see GameState#addMrX(Place)
      * @see GameState#addMrX()
      *
+     * @return The port of the newly added Detective
+     *
      * @author Julien
      *
      */
-    public void addDetective(final String alias, final Place startPosition) {
+    public int addDetective(final String alias, final Place startPosition) {
         Player newChallenger = new Player(port, alias, startPosition);
-        addDetective(newChallenger);
+        return addDetective(newChallenger);
     }
 
-    public void addDetective(final String alias) {
-        Player newChallenger = new Player(port, alias, getRandomFromVec(startFields));
-        addDetective(newChallenger);
+    public int addDetective(final String alias) {
+        Player newChallenger = new Player(port, alias, null);
+        return addDetective(newChallenger);
     }
 
-    private void addDetective(Player toAdd) {
+    private int addDetective(Player toAdd) {
         players.add(toAdd);
-        port++;
+        return port++;
     }
 
     /**
@@ -177,20 +158,26 @@ public class GameState {
      * A ticket has to be given because it is important not to just put any ticket with the right vehicle away, but one with the ability (chosen by the player) too, so the player can strategically collect abilities.
      * If this method returns false, the GameState-data has not been changed.
      *
-     * @param toMove The player who is making his move
+     * @param port The port of the player who is making his move
      * @param destination The place to go to
      * @param toUse The ticket to be used for the journey
      *
      * @return True, if the move was done successfully (player moved, ticket removed).
-     *      False,  if the ticket to use is not in the inventory,
+     *      False,  if the port is not associated with any player,
+     *              if the ticket to use is not in the inventory,
      *              if the destination is not directly connected to the current place of the player via a street or
      *              if the street cannot be travelled with the given ticket
      *
      * @author Julien
      *
      */
-    public boolean doMove(final Player toMove, final Place destination, Ticket toUse) {
+    public boolean doMove(final int port, final Place destination, Ticket toUse) {
         Vector<Ticket> theInventory;
+        Player toMove = getPlayerByPort(port);
+
+        if(toMove == null) {
+            return false;
+        }
 
         // whose inventory to get the Ticket from
         if(toMove.getPort() == 0) {
@@ -233,20 +220,27 @@ public class GameState {
      * The specific ability's effects will have to be done after calling this method.
      * via two calls of doTurn() for Mr. X or the doFreeTurn() for the detective(s).
      *
-     * @param player The player activating his ability. Will only be used to differentiate between Mr. X and detectives.
+     * @param port The port of the player activating his ability. Will only be used to differentiate between Mr. X and detectives.
      * @param ticketsUsed A vector containing the tickets to be used for the "extra turn"-ability
      * @param toActivate The
      *
      * @return True, if the tickets were successfully removed from the inventory.
-     *      False,  if the wrong number of tickets were given via the Vector,
+     *      False,  if the given port is not associated with any player,
+     *              if the wrong number of tickets were given via the Vector (if there are more than 3 Tickets for an ability of Mr. X nothing will be done and false returned),
      *              if one of the tickets in the given Vector is not in the inventory,
      *              if one of the tickets is not for the "extra turn"-ability.
      *
-     * @see com.craws.mrx.state.GameState#doFreeTurn(Player, Place)
+     * @see com.craws.mrx.state.GameState#doFreeTurn(int, Place)
      * @author Julien
      *
      */
-    public boolean activateAbility(final Player player, final Vector<Ticket> ticketsUsed, Ability toActivate) {
+    public boolean activateAbility(final int port, final Vector<Ticket> ticketsUsed, Ability toActivate) {
+        Player player = getPlayerByPort(port);
+
+        if(player == null) {
+            return false;
+        }
+
         if (player.getPort() == 0) {
             if(ticketsUsed.size() != 3) {
                 return false;
@@ -264,8 +258,8 @@ public class GameState {
             if(ticketsUsed.size() < 3 || ticketsUsed.size() > 5) {
                 return false;
             }
-            for(Ticket currTicket: inventory) {
-                if(!ticketsUsed.contains(currTicket) || currTicket.getAbility() != toActivate) {
+            for(Ticket currTicket: ticketsUsed) {
+                if(currTicket.getAbility() != toActivate || !inventory.contains(currTicket)) {
                     return false;
                 }
             }
@@ -278,10 +272,15 @@ public class GameState {
 
     /**
      * Moves the player to an adjacent Place without the need to use a Ticket.
-     * @param player The player to be moved for free.
+     * @param port The port of the player to be moved for free.
      * @param destination The destination place to let the player go to.
      */
-    public void doFreeTurn(final Player player, final Place destination) {
+    public void doFreeTurn(final int port, final Place destination) {
+        Player player = getPlayerByPort(port);
+        if(player == null) {
+            return;
+        }
+
         if(map.isConnected(map.getIndexByData(player.getPlace()), map.getIndexByData(destination))) {
             player.setPlace(destination);
         }
@@ -289,11 +288,11 @@ public class GameState {
 
     /**
      * Gives a free ticket to a given player
-     * @param player The Player to receive the ticket. This is only for differentiating between Mr. X and detectives.
+     * @param port The port of the Player to receive the ticket. This is only for differentiating between Mr. X and detectives.
      * @param toGive The Ticket to give to the specified Player.
      */
-    public void giveTicket(final Player player, final Ticket toGive) {
-        if(player.getPort() == 0) {
+    public void giveTicket(final int port, final Ticket toGive) {
+        if(port == 0) {
             inventoryX.add(toGive);
         } else {
             inventory.add(toGive);
@@ -302,18 +301,28 @@ public class GameState {
 
     /**
      * Removes a ticket from a given player
-     * @param player The Player to take the ticket from. This is only for differentiating between Mr. X and detectives.
+     * @param port The port of the Player to take the ticket from. This is only for differentiating between Mr. X and detectives.
      * @param toTake The Ticket to take from the specified Player.
      *
      * @return True, if a Ticket was successfully removed from an inventory.
      *          False, if the Ticket was not present in the Inventory to begin with.
      */
-    public boolean takeTicket(final Player player, final Ticket toTake) {
-        if(player.getPort() == 0) {
+    public boolean takeTicket(final int port, final Ticket toTake) {
+        if(port == 0) {
             return inventoryX.remove(toTake);
         } else {
             return inventory.remove(toTake);
         }
+    }
+
+    public Vehicle getStreet(final Place start, final Place destination) {
+        final int startIndex = map.getIndexByData(start);
+        final int endIndex = map.getIndexByData(destination);
+
+        if(startIndex == -1 || endIndex == -1 ) {
+            throw new IllegalArgumentException("One of the given Places is not present in the map.");
+        }
+        return map.getEdgeData(startIndex, endIndex);
     }
 
     /**
@@ -333,20 +342,6 @@ public class GameState {
             }
         }
         return null;
-    }
-
-    /**
-     * Returns a random element from a given Vector.
-     *
-     * @param theVec The Vector from which to retrieve a random element.
-     *
-     * @return A random element of the given Vector.
-     *
-     * @author Julien
-     *
-     */
-    private <T> T getRandomFromVec(Vector<T> theVec) {
-        return theVec.get((int)(Math.random()*theVec.size() - 1));
     }
 
     // ------ Getters ------

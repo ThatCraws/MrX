@@ -46,6 +46,9 @@ public class Tree<U, V> {
      */
     public int insertNode(U data) {
         Node<U, V> newNode = new Node<>(data);
+        if(root == null) {
+            root = newNode;
+        }
         nodes.add(newNode);
         return nodes.size() - 1;
     }
