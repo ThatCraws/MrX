@@ -16,7 +16,7 @@ public class Place {
 
     public Place(final String name) {
         this.name = name;
-        goal = false;
+        this.goal = false;
     }
 
     public Place(final String name, final boolean goal) {

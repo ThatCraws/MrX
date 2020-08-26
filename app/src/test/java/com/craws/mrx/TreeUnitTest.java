@@ -50,8 +50,8 @@ public class TreeUnitTest {
         assertFalse(theWorld.isConnected(rootIndex, placeCIndex));
         assertFalse(theWorld.isConnected(placeCIndex, rootIndex));
 
-        assertEquals(1, theWorld.getAdjacentNodes(rootIndex).size());
-        assertEquals(2, theWorld.getAdjacentNodes(placeBIndex).size());
-        assertEquals(1, theWorld.getAdjacentNodes(placeCIndex).size());
+        assertEquals(1, theWorld.getAdjacentNodeIDs(rootIndex).size());
+        assertEquals(2, theWorld.getAdjacentNodeIDs(placeBIndex).size());
+        assertEquals(1, theWorld.getAdjacentNodeIDs(placeCIndex).size());
     }
 }

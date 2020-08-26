@@ -78,6 +78,12 @@ public class GameState {
         return newPlace;
     }
 
+    public Place buildPlace(final String name, final boolean goal) {
+        Place newPlace = new Place(name, goal);
+        map.insertNode(newPlace);
+        return newPlace;
+    }
+
     /**
      * Builds a street between to places in the map. Meaning adding a connection between two given nodes on the map that represents the playing field.
      * Nodes can be added via buildPlace().
@@ -108,7 +114,8 @@ public class GameState {
      * @see GameState#addDetective(String, Place)
      * @see GameState#addDetective(String)
      *
-     * @return The port of Mr. X, whic is always 0 (just for consistence with the addDetective()-method.
+     * @return The port of Mr. X, which is always 0 (just for consistence with the addDetective()-method.
+     *
      * @see GameState#addDetective(String, Place)
      * @see GameState#addDetective(String)
      * 
@@ -120,8 +127,9 @@ public class GameState {
         return 0;
     }
 
-    public  void addMrX() {
+    public int addMrX() {
         mrX = new Player(0, "MrX", null);
+        return 0;
     }
 
     /**
@@ -192,7 +200,7 @@ public class GameState {
         }
 
         // checking that the destination is directly neighbouring the starting place of the player
-        if(!map.getAdjacentNodes(map.getIndexByData(toMove.getPlace())).contains(map.getNode(map.getIndexByData(destination)))) {
+        if(!map.getAdjacentNodeIDs(map.getIndexByData(toMove.getPlace())).contains(map.getIndexByData(destination))) {
             return false;
         }
 
@@ -208,10 +216,25 @@ public class GameState {
             if(toMove.getPort() == 0) {
                 timeline.addRound(toUse, destination);
             }
-
             return true;
         } else {
             return false;
+        }
+    }
+
+    /**
+     * Moves the player to an adjacent Place without the need to use a Ticket.
+     * @param port The port of the player to be moved for free.
+     * @param destination The destination place to let the player go to.
+     */
+    public void doFreeTurn(final int port, final Place destination) {
+        Player player = getPlayerByPort(port);
+        if(player == null) {
+            return;
+        }
+
+        if(map.isConnected(map.getIndexByData(player.getPlace()), map.getIndexByData(destination))) {
+            player.setPlace(destination);
         }
     }
 
@@ -271,32 +294,21 @@ public class GameState {
     }
 
     /**
-     * Moves the player to an adjacent Place without the need to use a Ticket.
-     * @param port The port of the player to be moved for free.
-     * @param destination The destination place to let the player go to.
-     */
-    public void doFreeTurn(final int port, final Place destination) {
-        Player player = getPlayerByPort(port);
-        if(player == null) {
-            return;
-        }
-
-        if(map.isConnected(map.getIndexByData(player.getPlace()), map.getIndexByData(destination))) {
-            player.setPlace(destination);
-        }
-    }
-
-    /**
      * Gives a free ticket to a given player
      * @param port The port of the Player to receive the ticket. This is only for differentiating between Mr. X and detectives.
      * @param toGive The Ticket to give to the specified Player.
+     *
+     * @return The Ticket put into the inventory
+     *
      */
-    public void giveTicket(final int port, final Ticket toGive) {
+    public Ticket giveTicket(final int port, final Ticket toGive) {
         if(port == 0) {
             inventoryX.add(toGive);
         } else {
             inventory.add(toGive);
         }
+
+        return toGive;
     }
 
     /**
@@ -315,6 +327,64 @@ public class GameState {
         }
     }
 
+    /**
+     * Checks if the game has been won by the detectives.
+     *
+     * @return True, if Mr. X is surrounded by cops I mean detectives or sharing a place with a detective.
+     *
+     * @author Julien
+     *
+     */
+    public boolean isGameWon() {
+        // check if the player is standing on the same field/place as Mr. X
+        for(Player currPlayer: players) {
+            if (mrX.getPlace().equals(currPlayer.getPlace())) {
+                return true;
+            }
+        }
+
+        // check if Mr. X is surrounded (detectives on all adjacent nodes/places)
+        Vector<Integer> escapeRoutes = map.getAdjacentNodeIDs(map.getIndexByData(mrX.getPlace()));
+        boolean escapeAvailable = false;
+        for (int i = 0; i < escapeRoutes.size() && (!escapeAvailable); i++) {
+            boolean placeOccupied = false;
+            for(Player currPlayer: players) {
+                if ((map.getNodeData(escapeRoutes.get(i)).equals(currPlayer.getPlace()))) {
+                    placeOccupied = true;
+                    break;
+                }
+            }
+            escapeAvailable = !placeOccupied;
+        }
+
+        return !escapeAvailable;
+    }
+
+    /**
+     * Checks if the game has been won by Mr. X.
+     *
+     * @return True, if Mr. X standing on a goal-place.
+     *
+     * @author Julien
+     *
+     */
+    public boolean isGameLost() {
+        return mrX.getPlace().isGoal();
+    }
+
+    /**
+     * Returns the street or rather the Vehicle needed to travel the Street connecting the Nodes represented by the given indices.
+     *
+     * @param start The index of the one Place
+     * @param destination The index of the other Place
+     *
+     * @return The Vehicle that is used to travel between the Places associated with the given indices.
+     *
+     * @see GameState#buildStreet(Place, Place, Vehicle)
+     *
+     * @author Julien
+     *
+     */
     public Vehicle getStreet(final Place start, final Place destination) {
         final int startIndex = map.getIndexByData(start);
         final int endIndex = map.getIndexByData(destination);
@@ -323,6 +393,26 @@ public class GameState {
             throw new IllegalArgumentException("One of the given Places is not present in the map.");
         }
         return map.getEdgeData(startIndex, endIndex);
+    }
+
+    /**
+     * Checks if a given Place is free or occupied by a Player.
+     *
+     * @param toCheck The Place to check for Players standing on top of it.
+     *
+     * @return true, if no Player is currently standing on this Place/Field.
+     *         false, if a Player is currently residing on this Place/field.
+     *
+     * @author Julien
+     *
+     */
+    public boolean isPlaceFree(final Place toCheck) {
+        for(Player currPlayer: players) {
+            if(currPlayer.getPlace().equals(toCheck)) {
+                return false;
+            }
+        }
+        return !(mrX.getPlace().equals(toCheck));
     }
 
     /**
@@ -336,6 +426,9 @@ public class GameState {
      *
      */
     public Player getPlayerByPort(final int port) {
+        if(port == 0) {
+            return mrX;
+        }
         for(Player currPlayer: players) {
             if(currPlayer.getPort() == port) {
                 return currPlayer;
@@ -344,7 +437,9 @@ public class GameState {
         return null;
     }
 
-    // ------ Getters ------
+
+    // ----------- GETTERS -----------
+
     public Vector<Player> getPlayers() {
         return players;
     }

@@ -85,14 +85,6 @@ public class Tree<U, V> {
         return newEdge;
     }
 
-    public void removeEdge() {
-        // TODO: Implement
-    }
-
-    public void removeNode() {
-        // TODO: Implement
-    }
-
     /**
      * Checks whether two Nodes are connected by an Edge.
      *
@@ -219,15 +211,15 @@ public class Tree<U, V> {
     }
 
     /**
-     * Returns a Vector containing all Nodes adjacent to the Node represented by the given index.
+     * Returns a Vector containing all Nodes' indices of the Nodes adjacent to the Node represented by the given index.
      *
      * @param node
-     *          The index of the Node the neighbours of which to return.
+     *          The index of the Node the neighbours' indices to return of which to return.
      *
-     * @return A vector of all the Nodes that are directly connected to the given one or null, if the index is not associated with any Node.
+     * @return A vector of all the Nodes' indices that are directly connected to the given one.
      * @author Julien
      */
-    public Vector<Node<U, V>> getAdjacentNodes(final int node) {
+    public Vector<Integer> getAdjacentNodeIDs(final int node) {
         Node<U, V> theNode;
         // Is the Node present?
         try {
@@ -237,7 +229,19 @@ public class Tree<U, V> {
             return null;
         }
 
-        return theNode.getAdjacentNodes();
+        // save indices in this
+        Vector<Integer> toRet = new Vector<>();
+        // go through adjacent nodes
+        for(Node<U, V> currNode: theNode.getAdjacentNodes()) {
+            // get index of current adjacent node. If index could not be found, the node has an edge in its edge-vector connecting it to a node which is not saved in the tree (which should not happen)
+            int toAdd = nodes.indexOf(currNode);
+            if(toAdd == -1) {
+                throw new IllegalStateException("The given Node is internally connected with a Node which is not saved/managed in the Tree.");
+            }
+            toRet.add(toAdd);
+        }
+
+        return toRet;
     }
 
     /**
@@ -250,7 +254,24 @@ public class Tree<U, V> {
         return nodes.size() == 0 && edges.size() == 0;
     }
 
+    public Vector<Integer> getNodeIDs() {
+        Vector<Integer> toRet = new Vector<>();
+        for(int i = 0; i < nodes.size(); i++) {
+            toRet.add(i);
+        }
+        return toRet;
+    }
+
     // ----------- GETTERS -----------
+
+    // Should this even stay? To the outside I wanna handle IDs and not Nodes...
+    public Node<U, V> getRoot() {
+        return root;
+    }
+    // Should this even stay? To the outside I wanna handle IDs and not Nodes...
+    public Vector<Node<U, V>> getNodes() {
+        return nodes;
+    }
 
     public int getNumberOfNodes() {
         return nodes.size();
@@ -259,11 +280,6 @@ public class Tree<U, V> {
     public int getNumberOfEdges() {
         return edges.size();
     }
-
-    public Node<U, V> getRoot() {
-        return root;
-    }
-
     // ----------- SETTERS -----------
 
     public void setRoot(final Node<U, V> newRoot) {

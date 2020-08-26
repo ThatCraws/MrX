@@ -32,15 +32,6 @@ public class GameView extends SurfaceView implements Runnable {
     private Paint paint;
     private Stack<Render> renderStack;
 
-    // Drawable Objects
-    private Figure playerOne;
-    private City homeCity;
-    private City secondCity;
-
-    // Temp
-    private Ticket medTicket;
-    private Ticket medTicketTwo;
-
     public GameView(Context context) {
         super(context);
 
@@ -58,9 +49,20 @@ public class GameView extends SurfaceView implements Runnable {
 
         GameState state = new GameState();
 
-
         surfaceHolder = getHolder();
         paint = new Paint();
+
+        buildMap();
+
+        createRenders();
+    }
+
+    private void buildMap() {
+        // TODO: Implement
+    }
+
+    private void createRenders() {
+        // TODO: Implement
     }
 
     @Override
