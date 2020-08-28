@@ -268,11 +268,28 @@ MEDIUM /  \ FAST
         Place goaldenCity = state.buildPlace("City of thieves", true);
         state.buildStreet(placeB, goaldenCity, Vehicle.FAST);
 
+        /* Map looks like this now.
+                Root
+         Det -> |A|
+            SLOW |   FAST
+       Mr. X -> |B| ----- |Goal|
+        MEDIUM /  \ FAST
+       Det-> |C|  |D| <-Det
+     */
+
         state.giveTicket(portX, new Ticket(Vehicle.FAST, Ability.SPECIAL));
 
         state.doMove(portX, goaldenCity, state.getInventoryX().firstElement());
 
+        // Mr. X won
         assertTrue(state.isGameLost());
         assertFalse(state.isGameWon());
+
+        // isPlaceOccupied-Test for empty City
+        assertFalse(state.isPlaceOccupied(placeB));
+        // for Mr. X in a City
+        assertTrue(state.isPlaceOccupied(goaldenCity));
+        // for Detective in a City
+        assertTrue(state.isPlaceOccupied(placeA));
     }
 }
