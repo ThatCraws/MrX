@@ -8,43 +8,83 @@ import com.craws.mrx.state.Place;
 
 public class City implements Render {
 
+    private Bitmap originalBitmap;
     private Bitmap bitmap;
 
-    private int x;
-    private int y;
+    private float x;
+    private float y;
 
-    private  int width = 80;
-    private  int height = 40;
+    // don't touch here
+    private Place
+        place;
 
-    public City(Context context, int x, int y) {
+    public City(final Context context, final Place place, final float x, final float y) {
+        this.place = place;
+
+        this.x = x;
+        this.y = y;
+
+        int width = 80;
+        int height = 40;
+
+        originalBitmap = BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.city);
+        bitmap = originalBitmap;
+    }
+
+    public City(final Context context, final Place place, final float x, final float y, final int width, final int height) {
+        this.place = place;
 
         this.x = x;
         this.y = y;
 
         bitmap = BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.city);
-        bitmap = Bitmap.createScaledBitmap(bitmap, width, height, false);
+        bitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, false);
     }
 
+    @Override
     public void update() {
     }
 
+    @Override
     public Bitmap getBitmap() {
         return bitmap;
     }
 
-    public int getX() {
+
+    @Override
+    public float getX() {
         return x;
     }
 
-    public int getY() {
-        return y;
-    }
-
-    public void setX(int x) {
+    @Override
+    public void setX(final float x) {
         this.x = x;
     }
 
-    public void setY(int y) {
+
+    @Override
+    public float getY() {
+        return y;
+    }
+
+    @Override
+    public void setY(final float y) {
         this.y = y;
+    }
+
+
+    @Override
+    public int getWidth() {
+        return bitmap.getWidth();
+    }
+
+    @Override
+    public int getHeight() {
+        return bitmap.getHeight();
+    }
+
+    @Override
+    public void resize(final int width, final int height) {
+        bitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, false);
     }
 }

@@ -1,6 +1,7 @@
 package com.craws.mrx.graphics;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
@@ -8,49 +9,62 @@ import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Player;
 
 public class Figure implements Render {
+    private Context context;
     private Player player;
 
+    private Bitmap originalBitmap;
     private Bitmap bitmap;
 
-    private int x;
-    private int y;
-
-    private int width;
-    private int height;
+    private float x;
+    private float y;
 
     public Figure(Context context, int port, String alias, Place startPosition) {
+        this.context = context;
+
         player = new Player(port, alias, startPosition);
 
-        x = 0;
-        y = 0;
+        x = 0f;
+        y = 0f;
 
-        width = 59;
-        height = 117;
+        final int width = 59;
+        final int height = 117;
 
-        switch(player.getPort()) {
-            case 0:
-                bitmap = BitmapFactory.decodeResource(context.getResources(),com.craws.mrx.R.drawable.mrx);
-                break;
-            case 1:
-                bitmap = BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det1);
-                break;
-            case 2:
-                bitmap = BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det2);
-                break;
-            case 3:
-                bitmap = BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det3);
-                break;
-            case 4:
-                bitmap = BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det4);
-                break;
-            case 5:
-                bitmap = BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det5);
-                break;
-        }
-        bitmap = Bitmap.createScaledBitmap(bitmap, width, height, false);
-
+        originalBitmap = getRightResource();
+        bitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, false);
     }
 
+    public Figure(Context context, int port, String alias, Place startPosition, final int width, final int height) {
+        this.context = context;
+
+        player = new Player(port, alias, startPosition);
+
+        x = 0f;
+        y = 0f;
+
+        originalBitmap = getRightResource();
+        bitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, false);
+    }
+
+    private Bitmap getRightResource() {
+        switch(player.getPort()) {
+            case 0:
+                return BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.mrx);
+            case 1:
+                return BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det1);
+            case 2:
+                return BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det2);
+            case 3:
+                return BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det3);
+            case 4:
+                return BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det4);
+            case 5:
+                return BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det5);
+            default:
+                return null; // TODO: Get "ERROR"-Bitmap
+        }
+    }
+
+    @Override
     public void update() {
         // TODO: Don't teleport. Let the Figure move to the destination.
     }
@@ -59,23 +73,44 @@ public class Figure implements Render {
         return player;
     }
 
+    @Override
     public Bitmap getBitmap() {
         return bitmap;
     }
 
-    public int getX() {
+
+    @Override
+    public float getX() {
         return x;
     }
 
-    public int getY() {
+    @Override
+    public float getY() {
         return y;
     }
 
-    public void setX(int x) {
+    @Override
+    public void setX(final float x) {
         this.x = x;
     }
 
-    public void setY(int y) {
+    @Override
+    public void setY(final float y) {
         this.y = y;
+    }
+
+    @Override
+    public int getWidth() {
+        return bitmap.getWidth();
+    }
+
+    @Override
+    public int getHeight() {
+        return bitmap.getHeight();
+    }
+
+    @Override
+    public void resize(final int width, final int height) {
+        bitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, false);
     }
 }
