@@ -396,23 +396,23 @@ public class GameState {
     }
 
     /**
-     * Checks if a given Place is free or occupied by a Player.
+     * Checks if a given Place is occupied by a Player.
      *
      * @param toCheck The Place to check for Players standing on top of it.
      *
-     * @return true, if no Player is currently standing on this Place/Field.
-     *         false, if a Player is currently residing on this Place/field.
+     * @return true, if a Player is currently standing on this Place/Field.
+     *         false, if no Player is currently residing on this Place/field.
      *
      * @author Julien
      *
      */
-    public boolean isPlaceFree(final Place toCheck) {
+    public boolean isPlaceOccupied(final Place toCheck) {
         for(Player currPlayer: players) {
             if(currPlayer.getPlace().equals(toCheck)) {
-                return false;
+                return true;
             }
         }
-        return !(mrX.getPlace().equals(toCheck));
+        return mrX.getPlace().equals(toCheck);
     }
 
     /**
