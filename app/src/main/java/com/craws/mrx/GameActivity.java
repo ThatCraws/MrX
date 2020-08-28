@@ -19,12 +19,11 @@ public class GameActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_game);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
-        gameView = (GameView)findViewById(R.id.gameView);
+        gameView = findViewById(R.id.gameView);
         //switchBtn = (Button)findViewById(R.id.btn_switch);
 
-        /**switchBtn.setOnClickListener(new View.OnClickListener() {
+        /*switchBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 gameView.switcheroo();
             }
