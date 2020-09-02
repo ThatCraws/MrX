@@ -1,9 +1,12 @@
 package com.craws.mrx.graphics;
 
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 
 public interface Render {
 
+    void draw(final Canvas canvas, final Paint paint);
     void update();
     Bitmap getBitmap();
 

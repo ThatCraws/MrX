@@ -1,9 +1,10 @@
 package com.craws.mrx.graphics;
 
 import android.content.Context;
-import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 
 import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Player;
@@ -18,6 +19,10 @@ public class Figure implements Render {
     private float x;
     private float y;
 
+    /* ---------========== ATTENTION PLEASE!!! ==========---------
+    TODO: REWORK THIS WHOLE SHIT LIKE YOU DID WITH THE CITY-CLASS AND/OR MAYBE MAKE RENDER A CLASS SO YOU CAN SHORTEN ALL SUBCLASSES BY A LOT LOT.
+
+     */
     public Figure(Context context, int port, String alias, Place startPosition) {
         this.context = context;
 
@@ -30,7 +35,6 @@ public class Figure implements Render {
         final int height = 117;
 
         originalBitmap = getRightResource();
-        bitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, false);
     }
 
     public Figure(Context context, int port, String alias, Place startPosition, final int width, final int height) {
@@ -42,7 +46,6 @@ public class Figure implements Render {
         y = 0f;
 
         originalBitmap = getRightResource();
-        bitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, false);
     }
 
     private Bitmap getRightResource() {
@@ -62,6 +65,11 @@ public class Figure implements Render {
             default:
                 return null; // TODO: Get "ERROR"-Bitmap
         }
+    }
+
+    @Override
+    public void draw(Canvas canvas, Paint paint) {
+
     }
 
     @Override
