@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Stack;
 import java.util.Vector;
 
+
 public class GameView extends SurfaceView {
 
     // ----------- App management -----------
@@ -29,6 +30,22 @@ public class GameView extends SurfaceView {
 
     // ----------- game engine -----------
     private GameThread gameThread;
+    private enum GAME_FLOW {
+        MRX_CHOOSE_TURN,            // Move (clicking city) or ability (clicking ticket before city)
+        MRX_CHOOSE_ABILITY_TICKETS, // after first Ticket is selected, selected the other two (with same ability, else abort and back to MRX_CHOOSE_TURN)
+        MRX_EXTRA_TURN,
+        MRX_SPECIAL,
+        MRX_MOVE,                   // To move the figure and add to the timeline
+        MRX_WIN_CHECK,              // Position check after Mr. X turn (he can't make himself lose). Make Mr. X disappear for detective's turn.
+        DET_CHOOSE_CITY,            // All detectives have to move before being able to activate an ability
+        DET_CHOOSE_TICKET,          // For travel
+        DET_MOVE,
+        DET_ABILITY,                // Round may not just end here. Either ask if ability should be activated or give a "end turn"-button.
+        DET_CHOOSE_ABILITY_TICKETS, // Choose 3-5 tickets, so "finish"-button or something will be needed (Ability-buttons below Inventory?)
+        DET_EXTRA_TURN,             // Choose City and travel there free of cost
+        DET_SPECIAL,                // Retrieve Location From Timeline (and set the city-sprite accordingly).
+        DET_WIN_CHECK               // lame
+    }
 
     // ----------- game state -----------
     private GameState gameState;
