@@ -154,7 +154,7 @@ public class GameView extends SurfaceView {
         this.context = context;
         gameThread = new GameThread(this);
 
-        //scrollDetector = new GestureDetector(context, new ScrollListener());
+        scrollDetector = new GestureDetector(context, new ScrollListener());
         scaleDetector = new ScaleGestureDetector(context, new ScaleListener());
 
         startGame();
@@ -165,6 +165,7 @@ public class GameView extends SurfaceView {
         this.context = context;
         gameThread = new GameThread(this);
 
+        scrollDetector = new GestureDetector(context, new ScrollListener());
         scaleDetector = new ScaleGestureDetector(context, new ScaleListener());
 
         startGame();
@@ -299,14 +300,14 @@ public class GameView extends SurfaceView {
     }
 
     // initialized in lines 158
-    GestureDetector scrollDetector = new GestureDetector(context, new ScrollListener());
+    GestureDetector scrollDetector;
     ScaleGestureDetector scaleDetector;
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
         scrollDetector.onTouchEvent(e);
         scaleDetector.onTouchEvent(e);
-        
+
         if (e.getAction() == MotionEvent.ACTION_UP) {
             if(!scrolled && !scaled) {
                 for (City city : cities) {
@@ -322,6 +323,7 @@ public class GameView extends SurfaceView {
                 scrolled = false;
                 scaled = false;
             }
+            performClick();
         }
         return true;
     }
