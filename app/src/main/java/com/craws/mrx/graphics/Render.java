@@ -8,6 +8,8 @@ public interface Render {
 
     void draw(final Canvas canvas, final Paint paint);
     void update();
+    boolean collisionCheck(final float x, final float y);
+
     Bitmap getBitmap();
 
     void setX(final float x);

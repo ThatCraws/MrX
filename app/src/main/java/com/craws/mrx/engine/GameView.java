@@ -93,9 +93,8 @@ public class GameView extends SurfaceView {
 
             pause();
 
-            //update viewports
-            srcViewport.set(0f, 0f, (float)getWidth() - 10f, (float)getHeight() - 10f);
-            dstViewport.set(0f, 0f, (float)getWidth() - 10f, (float)getHeight() - 10f);
+            //update viewport
+            dstViewport.set(0f, 0f, (float)getWidth(), (float)getHeight());
 
             // ----==== City Creation ====----
             // Divide the actual screen/this surfaceView.
@@ -216,20 +215,23 @@ public class GameView extends SurfaceView {
         ---===============================================---
         See https://developer.android.com/training/gestures/scale#java
      */
-    // The part of the map we're looking at
-    private RectF srcViewport = new RectF(0, 0, getWidth(), getHeight());
-
     // The rectangle in which the part of the map we're looking at is displayed
-    private RectF dstViewport = new RectF(0, 0, getWidth(), getHeight());
+    private RectF dstViewport = new RectF();
 
+    // The position we move the map to (or rather the canvas' Matrix meaning moving to the right on the map is moving the Matrix to the left)
     private float viewPortX = 0f;
     private float viewPortY = 0f;
 
-    private float viewPortScaleFactor = 1f;
+    // The further we zoom in the bigger the map gets scaled (and the smaller the viewport)
+    private float mapScaleFactor = 1f;
 
+    // When you scroll or scale you don't click
+    private boolean scrolled = false;
+    private boolean scaled = false;
 
     private class ScrollListener implements GestureDetector.OnGestureListener {
 
+        // Every Gesture starts with ACTION_DOWN, so we return true here to be able to process the Scoll-Gesture
         @Override
         public boolean onDown(MotionEvent e) {
             return true;
@@ -247,31 +249,27 @@ public class GameView extends SurfaceView {
 
         @Override
         public boolean onScroll(MotionEvent event1, MotionEvent event2, float distanceX, float distanceY) {
-            // TODO: look if you wanna use this
-            float viewportOffsetX = distanceX * dstViewport.width()
-                    / srcViewport.width();
-            float viewportOffsetY = -distanceY * dstViewport.height()
-                    / srcViewport.height();
 
+            // Bounds x-Axis
             if(viewPortX - distanceX > 0) {
                 viewPortX = 0;
-            } else if(viewPortX - distanceX < (mapWidth - (getWidth() * (1 / viewPortScaleFactor))) * (-1)) {
-                viewPortX = (mapWidth - (getWidth() * (1 / viewPortScaleFactor))) * (-1);
+            } else if(viewPortX - distanceX < ((mapWidth * mapScaleFactor) - (getWidth())) * -1) {
+                viewPortX = ((mapWidth * mapScaleFactor) - (getWidth())) * -1;
             } else {
                 viewPortX -= distanceX;
             }
 
+            // Bounds Y-Axis
             if(viewPortY - distanceY > 0) {
                 viewPortY = 0;
-            } else if(viewPortY - distanceY < ((mapHeight - getHeight() * (-viewPortScaleFactor)) * (-viewPortScaleFactor))) {
-                viewPortY = (mapHeight - getHeight() * (-viewPortScaleFactor)) * (-viewPortScaleFactor);
+            } else if(viewPortY - distanceY < ((mapHeight * mapScaleFactor) - (getHeight())) * -1) {
+                viewPortY = ((mapHeight * mapScaleFactor) - (getHeight())) * -1;
             } else {
                 viewPortY -= distanceY;
             }
 
-            System.out.println("We was here");
-            System.out.println("x: " + viewPortX);
-            System.out.println("y: " + viewPortY);
+            scrolled = true;
+
             return true;
         }
 
@@ -288,13 +286,14 @@ public class GameView extends SurfaceView {
 
     private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
         @Override public boolean onScale(ScaleGestureDetector detector) {
-            viewPortScaleFactor *= detector.getScaleFactor();
+            mapScaleFactor *= detector.getScaleFactor();
 
-            viewPortScaleFactor = Math.max(0.5f, Math.min(viewPortScaleFactor, 3f));
-
-            System.out.println("scale: " + viewPortScaleFactor);
+            mapScaleFactor = Math.max(0.5f, Math.min(mapScaleFactor, 3f));
 
             invalidate();
+
+            scaled = true;
+
             return true;
         }
     }
@@ -307,26 +306,42 @@ public class GameView extends SurfaceView {
     public boolean onTouchEvent(MotionEvent e) {
         scrollDetector.onTouchEvent(e);
         scaleDetector.onTouchEvent(e);
-
-        // TODO: adjust to scaling and scrolling
-        for(City city: cities) {
-            if(city.collisionCheck(e.getX(), e.getY())) {
-                if(selectedCity != null) {
-                    selectedCity.unselect();
+        
+        if (e.getAction() == MotionEvent.ACTION_UP) {
+            if(!scrolled && !scaled) {
+                for (City city : cities) {
+                    if (city.collisionCheck((e.getX() + (-viewPortX)) * (1 / mapScaleFactor), (e.getY() + (-viewPortY)) * (1 / mapScaleFactor))) {
+                        if (selectedCity != null) {
+                            selectedCity.unselect();
+                        }
+                        selectedCity = city;
+                        selectedCity.select();
+                    }
                 }
-                selectedCity = city;
-                selectedCity.select();
+            } else {
+                scrolled = false;
+                scaled = false;
             }
         }
         return true;
     }
 
+    @Override
+    public boolean performClick() {
+        super.performClick();
+        return false;
+    }
 
     protected void update() {
         for(Render toUpdate: renderStack) {
             toUpdate.update();
         }
     }
+
+    private Paint txtPaint = new Paint();
+    // --- Map (Debug/Testing) ---
+    // private Paint onlyBorders = new Paint();
+    // float massstab = 8f;
 
     protected void draw() {
         if(surfaceHolder.getSurface().isValid()) {
@@ -336,7 +351,8 @@ public class GameView extends SurfaceView {
             canvas.clipRect(dstViewport);
 
             canvas.translate(viewPortX, viewPortY);
-            canvas.scale(viewPortScaleFactor, viewPortScaleFactor);
+
+            canvas.scale(mapScaleFactor, mapScaleFactor);
 
             canvas.drawColor(Color.WHITE);
 
@@ -344,11 +360,17 @@ public class GameView extends SurfaceView {
                 toRender.draw(canvas, paint);
             }
 
-            canvas.drawText("THIS IS TEXT RIGHT HERE", 1500, 500, paint);
+            txtPaint.setTextSize(72);
 
+            // --- Map (Debug/Testing) ---
+            // onlyBorders.setStyle(Paint.Style.STROKE);
+            // onlyBorders.setStrokeWidth(15);
+            // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)), -viewPortY, -viewPortX + getWidth(), -viewPortY + (mapHeight / massstab), onlyBorders);
+            // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)) + (-viewPortX / massstab), -viewPortY + (-viewPortY / massstab), (-viewPortX + getWidth() - (mapWidth / massstab)) + (-viewPortX / massstab) + (getWidth() / massstab * (1 / mapScaleFactor)), -viewPortY + (-viewPortY / massstab) + (getHeight() / massstab), onlyBorders);
 
-            canvas.drawText("Dim: " + getWidth() + "x" + getHeight(), 20, 650, paint);
-
+            canvas.drawText("Pre: ", 1000, 650, txtPaint);
+            canvas.drawText("Post: ", 1000, 800, txtPaint);
+            canvas.drawText(String.valueOf((mapScaleFactor)), 1000, 950, txtPaint);
 
             surfaceHolder.unlockCanvasAndPost(canvas);
         }

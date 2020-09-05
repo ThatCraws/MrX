@@ -77,6 +77,11 @@ public class Figure implements Render {
         // TODO: Don't teleport. Let the Figure move to the destination.
     }
 
+    @Override
+    public boolean collisionCheck(float x, float y) {
+        return false;
+    }
+
     public Player getPlayer() {
         return player;
     }

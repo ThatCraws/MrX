@@ -21,6 +21,7 @@ public class GameThread extends Thread {
 
         while(running) {
             startTime = System.currentTimeMillis();
+            view.update();
             view.draw();
             sleepTime = System.currentTimeMillis() - startTime;
             try {

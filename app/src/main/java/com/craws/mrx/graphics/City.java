@@ -14,6 +14,8 @@ import com.craws.mrx.state.Place;
 public class City implements Render {
     private GameView gameView;
 
+    private Place place;
+
     // Sprite information
     private Bitmap bitmap;
     // Size per frame
@@ -35,8 +37,9 @@ public class City implements Render {
     private float y;
     Rect targetViewport;
 
-    public City(final Context context, final GameView gameView, final float x, final float y) {
+    public City(final Context context, final GameView gameView, final Place place, final float x, final float y) {
         this.gameView = gameView;
+        this.place = place;
 
         this.x = x;
         this.y = y;
@@ -47,8 +50,9 @@ public class City implements Render {
         height = frameSizeH = bitmap.getHeight() / framesH;
     }
 
-    public City(final Context context, final GameView gameView, final float x, final float y, final int width, final int height) {
+    public City(final Context context, final GameView gameView, final Place place, final float x, final float y, final int width, final int height) {
         this.gameView = gameView;
+        this.place = place;
 
         this.x = x;
         this.y = y;
@@ -64,19 +68,32 @@ public class City implements Render {
     }
 
     @Override
+    public void draw(final Canvas canvas, final Paint paint) {
+        canvas.drawBitmap(bitmap, viewport, targetViewport, paint);
+        canvas.drawText(place.getName(), targetViewport.left, targetViewport.bottom + 10, paint);
+    }
+
+    @Override
     public void update() {
         int srcX = (currFrame % framesW) * frameSizeW;
-        int srcY = currFrame / framesH * frameSizeH;
+        int srcY = currFrame / framesW * frameSizeH;
 
         viewport = new Rect(srcX, srcY, srcX + frameSizeW, srcY + frameSizeH);
         targetViewport = new Rect((int)x, (int)y, (int)x + width, (int)y + height);
     }
 
-    @Override
-    public void draw(final Canvas canvas, final Paint paint) {
-        update();
+    public void select() {
+        currFrame = 1;
+    }
 
-        canvas.drawBitmap(bitmap, viewport, targetViewport, paint);
+    public void unselect() {
+        currFrame = 0;
+    }
+
+    @Override
+    public boolean collisionCheck(final float x, final float y) {
+        // I could use the intern x and y points too, but left and right is easier to read
+        return ((targetViewport.left < x && x < targetViewport.right) && (targetViewport.top < y && y < targetViewport.bottom));
     }
 
     @Override
@@ -121,5 +138,9 @@ public class City implements Render {
     @Override
     public int getHeight() {
         return height;
+    }
+
+    public Place getPlace() {
+        return place;
     }
 }
