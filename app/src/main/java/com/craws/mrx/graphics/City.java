@@ -22,13 +22,21 @@ public class City implements Render {
     private int frameSizeW;
     private int frameSizeH;
     // number of frames
-    private static int framesW = 2;
-    private static int framesH = 1;
+    private static int framesW = 4;
+    private static int framesH = 2;
     // drawing dimensions per frame (the bitmap will stay unmodified)
     private int width;
     private int height;
-    // begin at the... beginning
-    private int currFrame = 0;
+    // all the frames
+    private int currFrame;
+    private static class FRAMES {
+        final static int NORMAL = 0;
+        final static int SELECTED = 1;
+        final static int MARKED = 2;
+        final static int GOAL = 4;
+        final static int GOAL_SELECTED = 5;
+    }
+
     // viewport
     Rect viewport;
 
@@ -48,6 +56,8 @@ public class City implements Render {
         // if no width or height is given keep the ones given to the bitmap (but still per frame)
         width = frameSizeW = bitmap.getWidth() / framesW;
         height = frameSizeH = bitmap.getHeight() / framesH;
+
+        currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
     }
 
     public City(final Context context, final GameView gameView, final Place place, final float x, final float y, final int width, final int height) {
@@ -65,6 +75,8 @@ public class City implements Render {
 
         frameSizeW = bitmap.getWidth() / framesW;
         frameSizeH = bitmap.getHeight() / framesH;
+
+        currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
     }
 
     @Override
@@ -83,11 +95,16 @@ public class City implements Render {
     }
 
     public void select() {
-        currFrame = 1;
+        currFrame = place.isGoal() ? FRAMES.GOAL_SELECTED : FRAMES.SELECTED;
     }
 
-    public void unselect() {
-        currFrame = 0;
+    public void reset() {
+        currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
+    }
+
+    public void mark() {
+        // Goals won't be marked, because only places which Mr. X visited in the last few rounds will be marked.
+        currFrame = place.isGoal() ? currFrame : FRAMES.MARKED;
     }
 
     @Override

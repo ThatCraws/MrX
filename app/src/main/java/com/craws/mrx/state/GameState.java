@@ -227,7 +227,7 @@ public class GameState {
      * @param port The port of the player to be moved for free.
      * @param destination The destination place to let the player go to.
      */
-    public void doFreeTurn(final int port, final Place destination) {
+    public void doFreeMove(final int port, final Place destination) {
         Player player = getPlayerByPort(port);
         if(player == null) {
             return;
@@ -241,7 +241,7 @@ public class GameState {
     /**
      * Reliefs players from the tickets necessary to activate the given ability.
      * The specific ability's effects will have to be done after calling this method.
-     * via two calls of doTurn() for Mr. X or the doFreeTurn() for the detective(s).
+     * via two calls of doMove() for Mr. X or the doFreeTurn() for the detective(s).
      *
      * @param port The port of the player activating his ability. Will only be used to differentiate between Mr. X and detectives.
      * @param ticketsUsed A vector containing the tickets to be used for the "extra turn"-ability
@@ -253,7 +253,9 @@ public class GameState {
      *              if one of the tickets in the given Vector is not in the inventory,
      *              if one of the tickets is not for the "extra turn"-ability.
      *
-     * @see com.craws.mrx.state.GameState#doFreeTurn(int, Place)
+     * @see com.craws.mrx.state.GameState#doFreeMove(int, Place)
+     * @see com.craws.mrx.state.GameState#doMove(int, Place, Ticket)
+     *
      * @author Julien
      *
      */

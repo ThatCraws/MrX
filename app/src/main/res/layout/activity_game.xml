@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
@@ -20,35 +19,33 @@
             android:id="@+id/gameView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_toLeftOf="@id/btn_switch"
+            android:layout_toStartOf="@id/relLayout_inventory"
             tools:layout_conversion_absoluteHeight="411dp"
             tools:layout_conversion_absoluteWidth="731dp" />
 
-        <Button
-            android:id="@+id/btn_switch"
+        <RelativeLayout
+            android:id="@+id/relLayout_inventory"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:layout_centerVertical="true"
-            android:text="@string/btn_switch_txt"
-            tools:layout_conversion_absoluteHeight="48dp"
-            tools:layout_conversion_absoluteWidth="150dp" />
+            android:layout_height="match_parent"
+            android:layout_alignParentEnd="true">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycly"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_above="@id/btn_end_turn" />
+
+            <Button
+                android:id="@+id/btn_end_turn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:text="@string/btn_end_turn_txt"
+                tools:layout_conversion_absoluteHeight="48dp"
+                tools:layout_conversion_absoluteWidth="150dp" />
+
+        </RelativeLayout>
+
     </RelativeLayout>
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:baselineAligned="false"
-        android:gravity="bottom|right"
-        android:orientation="horizontal"
-        android:id="@+id/linearLayout">
-
-    </LinearLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>

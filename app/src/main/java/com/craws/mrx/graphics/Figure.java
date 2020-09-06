@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 
+import com.craws.mrx.R;
 import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Player;
 
@@ -63,7 +64,7 @@ public class Figure implements Render {
             case 5:
                 return BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.det5);
             default:
-                return null; // TODO: Get "ERROR"-Bitmap
+                return BitmapFactory.decodeResource(context.getResources(), R.drawable.error);
         }
     }
 

@@ -37,6 +37,7 @@ public class GameView extends SurfaceView {
         MRX_SPECIAL,
         MRX_MOVE,                   // To move the figure and add to the timeline
         MRX_WIN_CHECK,              // Position check after Mr. X turn (he can't make himself lose). Make Mr. X disappear for detective's turn.
+        MRX_THROW_TICKETS,          // Mr. X can throw as many tickets as he wants and then restock to 8 Tickets.
         DET_CHOOSE_CITY,            // All detectives have to move before being able to activate an ability
         DET_CHOOSE_TICKET,          // For travel
         DET_MOVE,
@@ -44,7 +45,8 @@ public class GameView extends SurfaceView {
         DET_CHOOSE_ABILITY_TICKETS, // Choose 3-5 tickets, so "finish"-button or something will be needed (Ability-buttons below Inventory?)
         DET_EXTRA_TURN,             // Choose City and travel there free of cost
         DET_SPECIAL,                // Retrieve Location From Timeline (and set the city-sprite accordingly).
-        DET_WIN_CHECK               // lame
+        DET_WIN_CHECK,              // lame
+        DET_THROW_TICKETS           // Even the detective-player is allowed to throw as many tickets as they want and restock (to 4 + No. of controlled detectives)
     }
 
     // ----------- game state -----------
@@ -122,7 +124,7 @@ public class GameView extends SurfaceView {
             for(int x = 0; x < positionMap.length ; x++) {
                 for(int y = 0; y < positionMap[x].length; y++) {
                     if(positionMap[x][y]) {
-                        Place currentlyAdded = gameState.buildPlace("City" + (nameCount++ + 1), false);
+                        Place currentlyAdded = gameState.buildPlace("City" + (nameCount++ + 1), nameCount == 1);
                         City newRenderCity = new City(context, myParent, currentlyAdded, (cellWidth * x), (cellHeight * y));
 
                         // Scale to grid
@@ -330,7 +332,7 @@ public class GameView extends SurfaceView {
                 for (City city : cities) {
                     if (city.collisionCheck((e.getX() + (-viewPortX)) * (1 / mapScaleFactor), (e.getY() + (-viewPortY)) * (1 / mapScaleFactor))) {
                         if (selectedCity != null) {
-                            selectedCity.unselect();
+                            selectedCity.reset();
                         }
                         selectedCity = city;
                         selectedCity.select();
@@ -362,6 +364,12 @@ public class GameView extends SurfaceView {
     // private Paint onlyBorders = new Paint();
     // float massstab = 8f;
 
+    private Ticket lastUsed;
+
+    public void setLastUsed(Ticket lastUsed) {
+        this.lastUsed = lastUsed;
+    }
+
     protected void draw() {
         if(surfaceHolder.getSurface().isValid()) {
             canvas = surfaceHolder.lockCanvas();
@@ -387,9 +395,11 @@ public class GameView extends SurfaceView {
             // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)), -viewPortY, -viewPortX + getWidth(), -viewPortY + (mapHeight / massstab), onlyBorders);
             // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)) + (-viewPortX / massstab), -viewPortY + (-viewPortY / massstab), (-viewPortX + getWidth() - (mapWidth / massstab)) + (-viewPortX / massstab) + (getWidth() / massstab * (1 / mapScaleFactor)), -viewPortY + (-viewPortY / massstab) + (getHeight() / massstab), onlyBorders);
 
-            canvas.drawText("Pre: ", 1000, 650, txtPaint);
-            canvas.drawText("Post: ", 1000, 800, txtPaint);
-            canvas.drawText(String.valueOf((mapScaleFactor)), 1000, 950, txtPaint);
+            if(lastUsed != null) {
+                canvas.drawText("Last ticket used:", 1000, 650, txtPaint);
+                canvas.drawText("Vehicle: " + lastUsed.getVehicle(), 1000, 800, txtPaint);
+                canvas.drawText("Ability: " + lastUsed.getAbility(), 1000, 950, txtPaint);
+            }
 
             surfaceHolder.unlockCanvasAndPost(canvas);
         }
