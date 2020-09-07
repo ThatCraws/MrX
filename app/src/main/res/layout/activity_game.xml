@@ -30,7 +30,7 @@
             android:layout_alignParentEnd="true">
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recycly"
+                android:id="@+id/recycViewInventory"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:layout_above="@id/btn_end_turn" />

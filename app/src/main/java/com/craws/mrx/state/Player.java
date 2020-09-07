@@ -1,5 +1,7 @@
 package com.craws.mrx.state;
 
+import com.craws.mrx.graphics.Figure;
+
 /**
  * The player class saves the current state of the player's character and gives basic functionality all players share.
  * They travel between the places looking for Mr. X (or are Mr. X running from the detectives).
@@ -14,6 +16,8 @@ public class Player {
     private String alias;
     /** The current place the player resides in */
     private Place place;
+    /** The graphical representation of this Player. Might be null. */
+    private Figure figure = null;
 
     /** Constructor for creating a new Player
      *
@@ -55,5 +59,14 @@ public class Player {
      */
     public void setPlace(Place dest) {
         place = dest;
+    }
+
+
+    public void setFigure(Figure figure) {
+        this.figure = figure;
+    }
+
+    public Figure getFigure() {
+        return figure;
     }
 }

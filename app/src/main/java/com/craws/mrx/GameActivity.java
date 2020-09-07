@@ -1,14 +1,12 @@
 package com.craws.mrx;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.content.Context;
 import android.os.Bundle;
-import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
 
 import com.craws.mrx.engine.GameView;
 import com.craws.mrx.state.Ability;
@@ -30,7 +28,7 @@ public class GameActivity extends AppCompatActivity {
 
         gameView = findViewById(R.id.gameView);
 
-        recInventory = findViewById(R.id.recycly);
+        recInventory = findViewById(R.id.recycViewInventory);
         final Vector<Ticket> inventory = new Vector<>();
         inventory.add(new Ticket(Vehicle.FAST, Ability.EXTRA_TURN));
         inventory.add(new Ticket(Vehicle.MEDIUM, Ability.SPECIAL));
@@ -60,6 +58,14 @@ public class GameActivity extends AppCompatActivity {
 
         recInventory.setAdapter(adapter);
         recInventory.setLayoutManager(new GridLayoutManager(this, 2));
+
+        Button theButton = findViewById(R.id.btn_end_turn);
+        theButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                gameView.moveBitch();
+            }
+        });
     }
 
     @Override
