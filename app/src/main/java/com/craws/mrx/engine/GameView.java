@@ -13,6 +13,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 import com.craws.mrx.graphics.City;
+import com.craws.mrx.graphics.Figure;
 import com.craws.mrx.graphics.Render;
 import com.craws.mrx.state.GameState;
 import com.craws.mrx.state.Place;
@@ -62,19 +63,23 @@ public class GameView extends SurfaceView {
 
     // To draw the world we divide the map into cells. 28x15 = 420, so that leaves a lot of room to place cities.
     // The original game has 200, but we will have less (50% of the map being cities would get too cluttered).
-    final static int gridCellsX = 28;
-    final static int gridCellsY = 15;
+    final static int gridCellsX = 7;
+    final static int gridCellsY = 5;
 
     final static float mapWidth = 3700;
     final static float mapHeight = 2000;
 
 
     // The number of Cities randomly put on the map
-    final static int numberOfCities = 150;
+    final static int numberOfCities = 10;
     // True on the map means there is a City there
     boolean[][] positionMap = new boolean[gridCellsX][gridCellsY];
 
     private Vector<City> cities;
+    private Vector<Figure> figures;
+
+    // TODO REMOVE AFTER TESTING
+    private int theOnePlayer = 0;
 
     /*  ---=============================================================================---
        -----===== Listener for resizing and Display-dependent scaling/positioning =====-----
@@ -109,6 +114,7 @@ public class GameView extends SurfaceView {
 
             renderStack.clear();
             cities.clear();
+            figures.clear();
 
             pause();
 
@@ -125,7 +131,10 @@ public class GameView extends SurfaceView {
                 for(int y = 0; y < positionMap[x].length; y++) {
                     if(positionMap[x][y]) {
                         Place currentlyAdded = gameState.buildPlace("City" + (nameCount++ + 1), nameCount == 1);
-                        City newRenderCity = new City(context, myParent, currentlyAdded, (cellWidth * x), (cellHeight * y));
+                        City newRenderCity = new City(context, currentlyAdded, (cellWidth * x), (cellHeight * y));
+                        // The connection of these two has to be traceable from either side.
+                        currentlyAdded.setCity(newRenderCity);
+
 
                         // Scale to grid
                         // get the ratio of city-bitmap to grid-size for width and height individually
@@ -142,9 +151,20 @@ public class GameView extends SurfaceView {
                         newRenderCity.setY((cellHeight * y) + ((cellHeight - newRenderCity.getHeight()) / 2));
                         renderStack.add(newRenderCity);
                         cities.add(newRenderCity);
+
+
+                        if(nameCount == 2) {
+                            gameState.getPlayerByPort(theOnePlayer).setPlace(currentlyAdded);
+                            Figure playerOne = new Figure(context, gameState.getPlayerByPort(theOnePlayer));
+                            gameState.getPlayerByPort(theOnePlayer).setFigure(playerOne);
+                            figures.add(playerOne);
+                        }
                     }
                 }
             }
+
+
+
             resume();
         }
 
@@ -191,12 +211,15 @@ public class GameView extends SurfaceView {
     }
 
     private void startGame() {
-        // --- Initializing some Vars ---
-        // The game-state to display
+        // ---=== The game-state to display ==---
+        // for the map
         gameState = new GameState();
         selectedCity = null;
         selectedTickets = new Vector<>();
         cities = new Vector<>();
+
+        // players
+        figures = new Vector<>();
 
         // The things to draw (with)
         surfaceHolder = getHolder();
@@ -223,10 +246,9 @@ public class GameView extends SurfaceView {
                 cityCount++;
             }
         }
-        //positionMap[0][0] = true;
-        //positionMap[0][1] = true;
-        //positionMap[1][0] = true;
-        //positionMap[1][1] = true;
+
+        gameState.addDetective("The not chosen one");
+        theOnePlayer = gameState.addDetective("The chosen one");
     }
 
 
@@ -354,7 +376,10 @@ public class GameView extends SurfaceView {
     }
 
     protected void update() {
-        for(Render toUpdate: renderStack) {
+        for(City toUpdate: cities) {
+            toUpdate.update();
+        }
+        for(Figure toUpdate: figures) {
             toUpdate.update();
         }
     }
@@ -370,6 +395,14 @@ public class GameView extends SurfaceView {
         this.lastUsed = lastUsed;
     }
 
+    public void moveBitch() {
+        if (selectedCity != null) {
+            figures.firstElement().getPlayer().setPlace(selectedCity.getPlace());
+            selectedCity.reset();
+            selectedCity = null;
+        }
+    }
+
     protected void draw() {
         if(surfaceHolder.getSurface().isValid()) {
             canvas = surfaceHolder.lockCanvas();
@@ -383,7 +416,11 @@ public class GameView extends SurfaceView {
 
             canvas.drawColor(Color.WHITE);
 
-            for(Render toRender: renderStack) {
+            for(Render toRender: cities) {
+                toRender.draw(canvas, paint);
+            }
+
+            for(Render toRender: figures) {
                 toRender.draw(canvas, paint);
             }
 
@@ -419,6 +456,15 @@ public class GameView extends SurfaceView {
         gameThread = new GameThread(this);
         gameThread.setRunning(true);
         gameThread.start();
+    }
+
+    /** Blacks out screen and shows message until screen is touched.
+     * To communicate with human players and hide the screen from detective before Mr. X takes over.
+     *
+     * @param message The message to show the player until he touches the screen.
+     */
+    public void showMessageAndWaitForClick(final String message) {
+        // TODO: IMPLEMENT. Don't forget to ignore the touch for the gameplay
     }
 
     // ----------- GETTERS -----------
