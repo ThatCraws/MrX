@@ -19,6 +19,7 @@
             android:id="@+id/gameView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:layout_above="@id/recycle_timeline"
             android:layout_toStartOf="@id/relLayout_inventory"
             tools:layout_conversion_absoluteHeight="411dp"
             tools:layout_conversion_absoluteWidth="731dp" />
@@ -27,6 +28,7 @@
             android:id="@+id/relLayout_inventory"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
+            android:layout_above="@id/recycle_timeline"
             android:layout_alignParentEnd="true">
 
             <androidx.recyclerview.widget.RecyclerView
@@ -45,6 +47,13 @@
                 tools:layout_conversion_absoluteWidth="150dp" />
 
         </RelativeLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycle_timeline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:orientation="horizontal" />
 
     </RelativeLayout>
 

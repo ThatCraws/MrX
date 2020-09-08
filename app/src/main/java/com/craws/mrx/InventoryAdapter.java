@@ -73,7 +73,6 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
         ImageView vehicle;
         ImageView ability;
 
-        holder.itemView.setTag(ticket);
         switch(ticket.getVehicle()) {
             case SLOW:
                 holder.imageVehicle.setImageResource(R.drawable.vehicle_slow);
