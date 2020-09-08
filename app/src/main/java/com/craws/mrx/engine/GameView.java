@@ -12,11 +12,13 @@ import android.view.ScaleGestureDetector;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+import com.craws.mrx.GameActivity;
 import com.craws.mrx.graphics.City;
 import com.craws.mrx.graphics.Figure;
 import com.craws.mrx.graphics.Render;
 import com.craws.mrx.state.GameState;
 import com.craws.mrx.state.Place;
+import com.craws.mrx.state.Player;
 import com.craws.mrx.state.Ticket;
 
 import java.util.Arrays;
@@ -27,6 +29,7 @@ import java.util.Vector;
 public class GameView extends SurfaceView {
 
     // ----------- App management -----------
+    private GameActivity parent = null; // Gotta set this after instantiation =( Via setParent
     Context context;
 
     // ----------- game engine -----------
@@ -49,6 +52,7 @@ public class GameView extends SurfaceView {
         DET_WIN_CHECK,              // lame
         DET_THROW_TICKETS           // Even the detective-player is allowed to throw as many tickets as they want and restock (to 4 + No. of controlled detectives)
     }
+
 
     // ----------- game state -----------
     private GameState gameState;
@@ -75,9 +79,6 @@ public class GameView extends SurfaceView {
     // True on the map means there is a City there
     boolean[][] positionMap = new boolean[gridCellsX][gridCellsY];
 
-    private Vector<City> cities;
-    private Vector<Figure> figures;
-
     // TODO REMOVE AFTER TESTING
     private int theOnePlayer = 0;
 
@@ -86,20 +87,6 @@ public class GameView extends SurfaceView {
         ---=============================================================================---
      */
     private class GameViewListener implements SurfaceHolder.Callback {
-        private final GameView myParent;
-
-        float cellWidth;
-        float cellHeight;
-
-        boolean[][] theMap;
-
-        public GameViewListener(final GameView myParent, final boolean[][] theMap) {
-            this.myParent = myParent;
-            this.theMap = theMap;
-
-            cellWidth = 0;
-            cellHeight = 0;
-        }
 
 
         @Override
@@ -109,63 +96,6 @@ public class GameView extends SurfaceView {
 
         @Override
         public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-            selectedCity = null;
-            selectedTickets = new Vector<>();
-
-            renderStack.clear();
-            cities.clear();
-            figures.clear();
-
-            pause();
-
-            //update viewport
-            dstViewport.set(0f, 0f, (float)getWidth(), (float)getHeight());
-
-            // ----==== City Creation ====----
-            // Divide the actual screen/this surfaceView.
-            cellWidth = mapWidth/(float)gridCellsX;
-            cellHeight = mapHeight/(float)gridCellsY;
-            int nameCount = 0;
-
-            for(int x = 0; x < positionMap.length ; x++) {
-                for(int y = 0; y < positionMap[x].length; y++) {
-                    if(positionMap[x][y]) {
-                        Place currentlyAdded = gameState.buildPlace("City" + (nameCount++ + 1), nameCount == 1);
-                        City newRenderCity = new City(context, currentlyAdded, (cellWidth * x), (cellHeight * y));
-                        // The connection of these two has to be traceable from either side.
-                        currentlyAdded.setCity(newRenderCity);
-
-
-                        // Scale to grid
-                        // get the ratio of city-bitmap to grid-size for width and height individually
-                        float scaleFactorW = cellWidth / newRenderCity.getWidth();
-                        float scaleFactorH = cellHeight / newRenderCity.getHeight();
-
-                        // if the width has to be "scaled more" than height to fit into the grid use its scale-factor/ratio
-                        if(scaleFactorW < scaleFactorH) {
-                            newRenderCity.resize((int)((newRenderCity.getWidth() * scaleFactorW) * .9f), (int)((newRenderCity.getHeight() * scaleFactorW) * .9f));
-                        } else {
-                            newRenderCity.resize((int)((newRenderCity.getWidth() * scaleFactorH) * .9f), (int)((newRenderCity.getHeight() * scaleFactorH) * .9f));
-                        }
-                        newRenderCity.setX((cellWidth * x) + ((cellWidth - newRenderCity.getWidth()) / 2));
-                        newRenderCity.setY((cellHeight * y) + ((cellHeight - newRenderCity.getHeight()) / 2));
-                        renderStack.add(newRenderCity);
-                        cities.add(newRenderCity);
-
-
-                        if(nameCount == 2) {
-                            gameState.getPlayerByPort(theOnePlayer).setPlace(currentlyAdded);
-                            Figure playerOne = new Figure(context, gameState.getPlayerByPort(theOnePlayer));
-                            gameState.getPlayerByPort(theOnePlayer).setFigure(playerOne);
-                            figures.add(playerOne);
-                        }
-                    }
-                }
-            }
-
-
-
-            resume();
         }
 
         @Override
@@ -213,13 +143,9 @@ public class GameView extends SurfaceView {
     private void startGame() {
         // ---=== The game-state to display ==---
         // for the map
-        gameState = new GameState();
+        gameState = new GameState(context);
         selectedCity = null;
         selectedTickets = new Vector<>();
-        cities = new Vector<>();
-
-        // players
-        figures = new Vector<>();
 
         // The things to draw (with)
         surfaceHolder = getHolder();
@@ -227,7 +153,7 @@ public class GameView extends SurfaceView {
         renderStack = new Stack<>();
 
         // When the screen gets resized re-set the Places/Cities
-        surfaceHolder.addCallback(new GameViewListener(this, positionMap));
+        surfaceHolder.addCallback(new GameViewListener());
 
         // The grid we put our Cities in. The map is empty for now
         for (boolean[] currColumn : positionMap) {
@@ -247,8 +173,72 @@ public class GameView extends SurfaceView {
             }
         }
 
-        gameState.addDetective("The not chosen one");
-        theOnePlayer = gameState.addDetective("The chosen one");
+        /* ........................................................................................
+           .____________....__________......_______....____________.............................................
+           .|____   ____|...|   ______|.../.....___)...|____   ____|...........................................
+           ......|  |.......|  |______ ...\.....(...........|  |..................................................
+           ......|  |.......|   ______|....\.....\..........|  |....
+           ......|  |.......|  |______.....).....)..........|  |....
+           ......|__|.......|_________|...|.____/...........|__|....
+
+         */
+
+        float cellWidth;
+        float cellHeight;
+
+        selectedCity = null;
+        selectedTickets = new Vector<>();
+
+        renderStack.clear();
+
+        pause();
+
+        //update viewport
+        dstViewport.set(0f, 0f, (float)getWidth(), (float)getHeight());
+
+        // ----==== City Creation ====----
+        // Divide the actual screen/this surfaceView.
+        cellWidth = mapWidth/(float)gridCellsX;
+        cellHeight = mapHeight/(float)gridCellsY;
+        int nameCount = 0;
+
+        for(int x = 0; x < positionMap.length ; x++) {
+            for(int y = 0; y < positionMap[x].length; y++) {
+                if(positionMap[x][y]) {
+                    Place currentlyAdded = gameState.buildPlace("City" + (nameCount++ + 1), nameCount == 1);
+                    City newRenderCity = currentlyAdded.getCity();
+                    newRenderCity.moveTo(cellWidth * x, cellHeight * y);
+
+
+                    // Scale to grid
+                    // get the ratio of city-bitmap to grid-size for width and height individually
+                    float scaleFactorW = cellWidth / newRenderCity.getWidth();
+                    float scaleFactorH = cellHeight / newRenderCity.getHeight();
+
+                    // if the width has to be "scaled more" than height to fit into the grid use its scale-factor/ratio
+                    if(scaleFactorW < scaleFactorH) {
+                        newRenderCity.resize((int)((newRenderCity.getWidth() * scaleFactorW) * .9f), (int)((newRenderCity.getHeight() * scaleFactorW) * .9f));
+                    } else {
+                        newRenderCity.resize((int)((newRenderCity.getWidth() * scaleFactorH) * .9f), (int)((newRenderCity.getHeight() * scaleFactorH) * .9f));
+                    }
+                    newRenderCity.moveTo(cellWidth * x + (cellWidth - newRenderCity.getWidth()) / 2, cellHeight * y + (cellHeight - newRenderCity.getHeight()) / 2);
+                    renderStack.add(newRenderCity);
+
+                    if(nameCount == 2) {
+                        gameState.addDetective("The not chosen one");
+                        theOnePlayer = gameState.addDetective("The chosen one");
+                        gameState.getPlayerByPort(theOnePlayer).setPlace(currentlyAdded);
+                        Figure playerOne = gameState.getPlayerByPort(theOnePlayer).getFigure();
+                        playerOne.snapToCurrentCity();
+                    }
+                }
+            }
+        }
+
+        resume();
+
+        //---------------------------------------------------------------------------------------------------------------
+        //---------------------------------------------------------------------------------------------------------------
     }
 
 
@@ -268,8 +258,8 @@ public class GameView extends SurfaceView {
     private float mapScaleFactor = 1f;
 
     // When you scroll or scale you don't click
-    private boolean scrolled = false;
-    private boolean scaled = false;
+    private boolean scrolling = false;
+    private boolean scaling = false;
 
     private class ScrollListener implements GestureDetector.OnGestureListener {
 
@@ -292,26 +282,27 @@ public class GameView extends SurfaceView {
         @Override
         public boolean onScroll(MotionEvent event1, MotionEvent event2, float distanceX, float distanceY) {
 
-            // Bounds x-Axis
-            if(viewPortX - distanceX > 0) {
-                viewPortX = 0;
-            } else if(viewPortX - distanceX < ((mapWidth * mapScaleFactor) - (getWidth())) * -1) {
-                viewPortX = ((mapWidth * mapScaleFactor) - (getWidth())) * -1;
-            } else {
-                viewPortX -= distanceX;
+            if(!scaling) {
+                // Bounds x-Axis
+                if (viewPortX - distanceX > 0) {
+                    viewPortX = 0;
+                } else if (viewPortX - distanceX < ((mapWidth * mapScaleFactor) - (getWidth())) * -1) {
+                    viewPortX = ((mapWidth * mapScaleFactor) - (getWidth())) * -1;
+                } else {
+                    viewPortX -= distanceX;
+                }
+
+                // Bounds Y-Axis
+                if (viewPortY - distanceY > 0) {
+                    viewPortY = 0;
+                } else if (viewPortY - distanceY < ((mapHeight * mapScaleFactor) - (getHeight())) * -1) {
+                    viewPortY = ((mapHeight * mapScaleFactor) - (getHeight())) * -1;
+                } else {
+                    viewPortY -= distanceY;
+                }
+
+                scrolling = true;
             }
-
-            // Bounds Y-Axis
-            if(viewPortY - distanceY > 0) {
-                viewPortY = 0;
-            } else if(viewPortY - distanceY < ((mapHeight * mapScaleFactor) - (getHeight())) * -1) {
-                viewPortY = ((mapHeight * mapScaleFactor) - (getHeight())) * -1;
-            } else {
-                viewPortY -= distanceY;
-            }
-
-            scrolled = true;
-
             return true;
         }
 
@@ -328,13 +319,34 @@ public class GameView extends SurfaceView {
 
     private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
         @Override public boolean onScale(ScaleGestureDetector detector) {
-            mapScaleFactor *= detector.getScaleFactor();
 
-            mapScaleFactor = Math.max(0.5f, Math.min(mapScaleFactor, 3f));
+            float oldScaleFactor = mapScaleFactor;
+
+            mapScaleFactor *= detector.getScaleFactor();
+            mapScaleFactor = Math.max(0.4f, Math.min(mapScaleFactor, 2.0f));
+
+            // to scale around the center of the screen and not fly across the map while scrolling
+            // but don't scroll beyond bounds (just like in onScroll
+            if (viewPortX - ((mapScaleFactor * mapWidth) - (oldScaleFactor * mapWidth)) / 2 > 0) {
+                viewPortX = 0;
+            } else if (viewPortX - ((mapScaleFactor * mapWidth) - (oldScaleFactor * mapWidth)) / 2 < ((mapWidth * mapScaleFactor) - (getWidth())) * -1) {
+                viewPortX = ((mapWidth * mapScaleFactor) - (getWidth())) * -1;
+            } else {
+                viewPortX -= ((mapScaleFactor * mapWidth) - (oldScaleFactor * mapWidth)) / 2;
+            }
+
+            // Bounds Y-Axis
+            if (viewPortY - ((mapScaleFactor * mapHeight) - (oldScaleFactor * mapHeight)) / 2 > 0) {
+                viewPortY = 0;
+            } else if (viewPortY - ((mapScaleFactor * mapHeight) - (oldScaleFactor * mapHeight)) / 2 < ((mapHeight * mapScaleFactor) - (getHeight())) * -1) {
+                viewPortY = ((mapHeight * mapScaleFactor) - (getHeight())) * -1;
+            } else {
+                viewPortY -= ((mapScaleFactor * mapHeight) - (oldScaleFactor * mapHeight)) / 2;
+            }
 
             invalidate();
 
-            scaled = true;
+            scaling = true;
 
             return true;
         }
@@ -346,23 +358,23 @@ public class GameView extends SurfaceView {
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
-        scrollDetector.onTouchEvent(e);
         scaleDetector.onTouchEvent(e);
+        scrollDetector.onTouchEvent(e);
 
         if (e.getAction() == MotionEvent.ACTION_UP) {
-            if(!scrolled && !scaled) {
-                for (City city : cities) {
-                    if (city.collisionCheck((e.getX() + (-viewPortX)) * (1 / mapScaleFactor), (e.getY() + (-viewPortY)) * (1 / mapScaleFactor))) {
+            if(!scrolling && !scaling) {
+                for (Place place : gameState.getPlaces()) {
+                    if (place.getCity().collisionCheck((e.getX() + (-viewPortX)) * (1 / mapScaleFactor), (e.getY() + (-viewPortY)) * (1 / mapScaleFactor))) {
                         if (selectedCity != null) {
                             selectedCity.reset();
                         }
-                        selectedCity = city;
+                        selectedCity = place.getCity();
                         selectedCity.select();
                     }
                 }
             } else {
-                scrolled = false;
-                scaled = false;
+                scrolling = false;
+                scaling = false;
             }
             performClick();
         }
@@ -376,11 +388,14 @@ public class GameView extends SurfaceView {
     }
 
     protected void update() {
-        for(City toUpdate: cities) {
-            toUpdate.update();
+        for(Place toUpdate: gameState.getPlaces()) {
+            toUpdate.getCity().update();
         }
-        for(Figure toUpdate: figures) {
-            toUpdate.update();
+        for(Player toUpdate: gameState.getPlayers()) {
+            toUpdate.getFigure().update();
+        }
+        if(gameState.getMrX() != null) {
+            gameState.getMrX().getFigure().update();
         }
     }
 
@@ -397,7 +412,7 @@ public class GameView extends SurfaceView {
 
     public void moveBitch() {
         if (selectedCity != null) {
-            figures.firstElement().getPlayer().setPlace(selectedCity.getPlace());
+            gameState.getPlayerByPort(theOnePlayer).setPlace(selectedCity.getPlace());
             selectedCity.reset();
             selectedCity = null;
         }
@@ -416,12 +431,14 @@ public class GameView extends SurfaceView {
 
             canvas.drawColor(Color.WHITE);
 
-            for(Render toRender: cities) {
-                toRender.draw(canvas, paint);
+            for(Place toUpdate: gameState.getPlaces()) {
+                toUpdate.getCity().draw(canvas, paint);
             }
-
-            for(Render toRender: figures) {
-                toRender.draw(canvas, paint);
+            for(Player toUpdate: gameState.getPlayers()) {
+                toUpdate.getFigure().draw(canvas, paint);
+            }
+            if(gameState.getMrX() != null) {
+                gameState.getMrX().getFigure().draw(canvas, paint);
             }
 
             txtPaint.setTextSize(72);
@@ -471,5 +488,9 @@ public class GameView extends SurfaceView {
 
     public GameState getGameState() {
         return gameState;
+    }
+
+    public void setParent(final GameActivity parent) {
+        this.parent = parent;
     }
 }

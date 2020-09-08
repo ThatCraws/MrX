@@ -1,10 +1,14 @@
 package com.craws.mrx.state;
 
+import android.content.Context;
+
 import com.craws.mrx.graphics.Figure;
 
 /**
  * The player class saves the current state of the player's character and gives basic functionality all players share.
  * They travel between the places looking for Mr. X (or are Mr. X running from the detectives).
+ *
+ * On instantiation automatically creates a Figure for graphically represent this Player.
  *
  * @author Julien
  *
@@ -16,8 +20,8 @@ public class Player {
     private String alias;
     /** The current place the player resides in */
     private Place place;
-    /** The graphical representation of this Player. Might be null. */
-    private Figure figure = null;
+    /** The graphical representation of this Player. */
+    private Figure figure;
 
     /** Constructor for creating a new Player
      *
@@ -25,16 +29,20 @@ public class Player {
      * @param alias The player's name
      * @param startPosition The starting position/place of the player (optional, default value: null)
      */
-    public Player(int port, String alias, Place startPosition) {
+    public Player(final Context context, int port, String alias, Place startPosition) {
         this.port = port;
         this.alias = alias;
         this.place = startPosition;
+
+        figure = new Figure(context, this);
     }
 
-    public Player(int port, String alias) {
+    public Player(final Context context, int port, String alias) {
         this.port = port;
         this.alias = alias;
         this.place = null;
+
+        figure = new Figure(context, this);
     }
 
     public int getPort() {

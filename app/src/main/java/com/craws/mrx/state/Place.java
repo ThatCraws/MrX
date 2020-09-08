@@ -1,5 +1,7 @@
 package com.craws.mrx.state;
 
+import android.content.Context;
+
 import com.craws.mrx.graphics.City;
 
 /**
@@ -16,16 +18,20 @@ public class Place {
     /** Flag that shows, if this Place is a goal-field for Mr. X to get to to win the game. */
     private boolean goal;
     /** The graphical representation of this Place. Might be null. */
-    private City city = null;
+    private City city;
 
-    public Place(final String name) {
+    public Place(final Context context, final String name) {
         this.name = name;
         this.goal = false;
+
+        city = new City(context, this);
     }
 
-    public Place(final String name, final boolean goal) {
+    public Place(final Context context, final String name, final boolean goal) {
         this.name = name;
         this.goal = goal;
+
+        city = new City(context, this);
     }
 
     public String getName() {

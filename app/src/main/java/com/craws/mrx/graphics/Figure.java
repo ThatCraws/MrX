@@ -17,7 +17,7 @@ public class Figure extends Render {
         super(BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.player_sprites), 1, 6, 0f, 0f);
         this.player = player;
 
-        snapToCity(player.getPlace().getCity());
+        snapToCurrentCity();
 
         currFrame = player.getPort();
     }
@@ -26,7 +26,7 @@ public class Figure extends Render {
         super(BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.player_sprites), 1, 6, 0f, 0f, width, height);
         this.player = player;
 
-        snapToCity(player.getPlace().getCity());
+        snapToCurrentCity();
 
         currFrame = player.getPort();
     }
@@ -35,7 +35,7 @@ public class Figure extends Render {
     public void update() {
         updateViewport();
 
-        if(player.getPlace().getCity() != null) {
+        if(player.getPlace() != null) {
             // get necessary information about the city to travel to
             float placeX = player.getPlace().getCity().getX();
             float placeY = player.getPlace().getCity().getY();
@@ -88,22 +88,22 @@ public class Figure extends Render {
                 float ratio = step / currDistance;
 
                 if (Math.abs(currDistance) < Math.abs(step)) {
-                    setX(targetX);
-                    setY(targetY);
+                    moveTo(targetX, targetY);
                     travelling = false;
                     totalTravelDistance = 0;
                 } else {
                     // stretch the vector axes by the ratio
-                    setX(getX() + deltaX * ratio);
-                    setY(getY() + deltaY * ratio);
+                    moveTo(getX() + deltaX * ratio,getY() + deltaY * ratio);
                 }
             }
         }
     }
 
-    public void snapToCity(final City city) {
-        setX(city.getX() + city.getWidth() / 2f - getWidth() / 2f);
-        setY(city.getY() + city.getHeight() / 2f - getHeight());
+    public void snapToCurrentCity() {
+        City city = (player.getPlace() != null) ? player.getPlace().getCity() : null;
+        if(city != null) {
+            moveTo(city.getX() + city.getWidth() / 2f - getWidth() / 2f, city.getY() + city.getHeight() / 2f - getHeight());
+        }
     }
 
     public Player getPlayer() {

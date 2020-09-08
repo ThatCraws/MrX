@@ -1,5 +1,7 @@
 package com.craws.mrx.state;
 
+import android.content.Context;
+
 import com.craws.tree.Tree;
 
 import java.util.Vector;
@@ -26,12 +28,17 @@ public class GameState {
     // The Mr. X player's inventory;
     private Vector<Ticket> inventoryX;
 
-    public GameState() {
+    // Because android this class has to know about context...
+    private Context context;
+
+    public GameState(final Context context) {
+        this.context = context;
         map = new Tree<>();
         setup();
     }
 
-    public GameState(final Place firstPlace) {
+    public GameState(final Context context, final Place firstPlace) {
+        this.context = context;
         map = new Tree<>(firstPlace);
         setup();
     }
@@ -73,13 +80,13 @@ public class GameState {
      *
      */
     public Place buildPlace(final String name) {
-        Place newPlace = new Place(name);
+        Place newPlace = new Place(context, name);
         map.insertNode(newPlace);
         return newPlace;
     }
 
     public Place buildPlace(final String name, final boolean goal) {
-        Place newPlace = new Place(name, goal);
+        Place newPlace = new Place(context, name, goal);
         map.insertNode(newPlace);
         return newPlace;
     }
@@ -123,12 +130,12 @@ public class GameState {
      *
      */
     public int addMrX(final Place startPosition) {
-        mrX = new Player(0, "Mr. X", startPosition);
+        mrX = new Player(context, 0, "Mr. X", startPosition);
         return 0;
     }
 
     public int addMrX() {
-        mrX = new Player(0, "MrX", null);
+        mrX = new Player(context, 0, "MrX", null);
         return 0;
     }
 
@@ -147,12 +154,12 @@ public class GameState {
      *
      */
     public int addDetective(final String alias, final Place startPosition) {
-        Player newChallenger = new Player(port, alias, startPosition);
+        Player newChallenger = new Player(context, port, alias, startPosition);
         return addDetective(newChallenger);
     }
 
     public int addDetective(final String alias) {
-        Player newChallenger = new Player(port, alias, null);
+        Player newChallenger = new Player(context, port, alias, null);
         return addDetective(newChallenger);
     }
 
@@ -444,6 +451,14 @@ public class GameState {
 
     public Vector<Player> getPlayers() {
         return players;
+    }
+
+    public Vector<Place> getPlaces() {
+        Vector<Place> toRet = new Vector<>();
+        for(int i = 0; i < map.getNumberOfNodes(); i++) {
+            toRet.add(map.getNodeData(i));
+        }
+        return toRet;
     }
 
     public Player getMrX() {

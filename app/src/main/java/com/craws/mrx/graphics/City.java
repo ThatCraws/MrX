@@ -1,6 +1,8 @@
 package com.craws.mrx.graphics;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -20,8 +22,15 @@ public class City extends Render {
         final static int GOAL_SELECTED = 5;
     }
 
+    public City(final Context context, final Place place) {
+        super(BitmapFactory.decodeResource(context.getResources(), R.drawable.city_sprites), 4, 2, 0f, 0f);
+        this.place = place;
+
+        currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
+    }
+
     public City(final Context context, final Place place, final float x, final float y) {
-        super(BitmapFactory.decodeResource(context.getResources(), R.drawable.city_sprites), 4, 2, x, y);
+        super(BitmapFactory.decodeResource(context.getResources() , R.drawable.city_sprites), 4, 2, x, y);
         this.place = place;
 
         currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;

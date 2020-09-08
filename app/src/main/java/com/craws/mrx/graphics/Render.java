@@ -1,5 +1,6 @@
 package com.craws.mrx.graphics;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -88,6 +89,11 @@ public abstract class Render {
         this.height = height;
     }
 
+    public void moveTo(final float x, final float y) {
+        this.x = x;
+        this.y = y;
+    }
+
     public Bitmap getBitmap() {
         return bitmap;
     }
@@ -96,17 +102,8 @@ public abstract class Render {
         return x;
     }
 
-    public void setX(final float x) {
-        this.x = x;
-    }
-
-
     public float getY() {
         return y;
-    }
-
-    public void setY(final float y) {
-        this.y = y;
     }
 
 
