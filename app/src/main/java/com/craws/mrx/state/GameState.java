@@ -75,10 +75,19 @@ public class GameState {
      * Builds a place in the map. Meaning adding a node to the map that represents the playing field.
      * Connections between Places can be made via buildStreet().
      * @param name The user-displayable name of the Place.
+     * @param goal true, if this is a goal-Place for Mr.X (default = false)
+     * @param x The initial x-position of the City representing the newly created Place (default = 0)
+     * @param y The initial y-position of the City representing the newly created Place (default = 0)
      *
      * @author Julien
      *
      */
+    public Place buildPlace(final String name, final boolean goal, final float x, final float y) {
+        Place newPlace = new Place(context, name, goal, x, y);
+        map.insertNode(newPlace);
+        return newPlace;
+    }
+
     public Place buildPlace(final String name) {
         Place newPlace = new Place(context, name);
         map.insertNode(newPlace);

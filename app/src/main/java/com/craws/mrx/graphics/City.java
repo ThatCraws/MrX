@@ -7,7 +7,9 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 
+import com.craws.mrx.GameActivity;
 import com.craws.mrx.R;
+import com.craws.mrx.engine.GameView;
 import com.craws.mrx.state.Place;
 
 public class City extends Render {
@@ -46,7 +48,8 @@ public class City extends Render {
     @Override
     public void draw(final Canvas canvas, final Paint paint) {
         super.draw(canvas, paint);
-        canvas.drawText(place.getName(), targetViewport.left, targetViewport.bottom + 10, paint);
+
+        canvas.drawText(place.getName(), targetViewport.left + getWidth() / 2f, targetViewport.bottom + 20, paint);
     }
 
     @Override

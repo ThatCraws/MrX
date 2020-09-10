@@ -41,6 +41,15 @@ public abstract class Render {
         // if no width or height is given keep the ones given to the bitmap (but still per frame)
         width = frameSizeW = bitmap.getWidth() / framesW;
         height = frameSizeH = bitmap.getHeight() / framesH;
+
+        // initiate Viewports on 1st frame, just so they are not null
+        currFrame = 0;
+
+        int srcX = (currFrame % framesW) * frameSizeW;
+        int srcY = currFrame / framesW * frameSizeH;
+
+        viewport = new Rect(srcX, srcY, srcX + frameSizeW, srcY + frameSizeH);
+        targetViewport = new Rect((int)x, (int)y, (int)x + width, (int)y + height);
     }
 
     public Render(final Bitmap bitmap, final int framesW, final int framesH, final float x, final float y, final int width, final int height) {
@@ -58,6 +67,15 @@ public abstract class Render {
 
         frameSizeW = bitmap.getWidth() / framesW;
         frameSizeH = bitmap.getHeight() / framesH;
+
+        // initiate Viewports on 1st frame, just so they are not null
+        currFrame = 0;
+
+        int srcX = (currFrame % framesW) * frameSizeW;
+        int srcY = currFrame / framesW * frameSizeH;
+
+        viewport = new Rect(srcX, srcY, srcX + frameSizeW, srcY + frameSizeH);
+        targetViewport = new Rect((int)x, (int)y, (int)x + width, (int)y + height);
     }
 
     public void draw(final Canvas canvas, final Paint paint) {
@@ -72,8 +90,8 @@ public abstract class Render {
         int srcX = (currFrame % framesW) * frameSizeW;
         int srcY = currFrame / framesW * frameSizeH;
 
-        viewport = new Rect(srcX, srcY, srcX + frameSizeW, srcY + frameSizeH);
-        targetViewport = new Rect((int)x, (int)y, (int)x + width, (int)y + height);
+        viewport.set(srcX, srcY, srcX + frameSizeW, srcY + frameSizeH);
+        targetViewport.set((int)x, (int)y, (int)x + width, (int)y + height);
     }
 
     // Should call updateViewport

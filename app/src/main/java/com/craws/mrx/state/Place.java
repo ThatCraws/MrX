@@ -20,16 +20,23 @@ public class Place {
     /** The graphical representation of this Place. Might be null. */
     private City city;
 
-    public Place(final Context context, final String name) {
+    public Place(final Context context, final String name, final boolean goal, final float x, final float y) {
         this.name = name;
-        this.goal = false;
+        this.goal = goal;
 
-        city = new City(context, this);
+        city = new City(context, this, x, y);
     }
 
     public Place(final Context context, final String name, final boolean goal) {
         this.name = name;
         this.goal = goal;
+
+        city = new City(context, this);
+    }
+
+    public Place(final Context context, final String name) {
+        this.name = name;
+        this.goal = false;
 
         city = new City(context, this);
     }
