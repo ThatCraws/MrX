@@ -8,7 +8,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.HorizontalScrollView;
 
 import com.craws.mrx.engine.GameView;
 import com.craws.mrx.state.Ability;
@@ -18,9 +17,6 @@ import com.craws.mrx.state.Timeline;
 import com.craws.mrx.state.Vehicle;
 
 import java.util.Vector;
-
-import static android.view.View.GONE;
-import static android.view.View.VISIBLE;
 
 public class GameActivity extends AppCompatActivity {
 
@@ -75,11 +71,6 @@ public class GameActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 gameView.moveBitch();
-                if( recInventory.getVisibility() == VISIBLE) {
-                    recInventory.setVisibility(GONE);
-                } else {
-                    recInventory.setVisibility(VISIBLE);
-                }
             }
         });
 
