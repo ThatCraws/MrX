@@ -14,7 +14,6 @@ import android.view.SurfaceView;
 
 import com.craws.mrx.GameActivity;
 import com.craws.mrx.graphics.City;
-import com.craws.mrx.graphics.Figure;
 import com.craws.mrx.graphics.Render;
 import com.craws.mrx.state.GameState;
 import com.craws.mrx.state.Place;
@@ -62,8 +61,10 @@ public class GameView extends SurfaceView {
     // ----------- graphics -----------
     private SurfaceHolder surfaceHolder;
     private Canvas canvas;
-    private Paint paint;
     private Stack<Render> renderStack;
+    private Paint paint;
+
+    public final static float cityTxtSize = 36;
 
     // To draw the world we divide the map into cells. 28x15 = 420, so that leaves a lot of room to place cities.
     // The original game has 200, but we will have less (50% of the map being cities would get too cluttered).
@@ -96,6 +97,7 @@ public class GameView extends SurfaceView {
 
         @Override
         public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            dstViewport.set(0, 0, getWidth(), getHeight());
         }
 
         @Override
@@ -150,6 +152,9 @@ public class GameView extends SurfaceView {
         // The things to draw (with)
         surfaceHolder = getHolder();
         paint = new Paint();
+        paint.setTextSize(cityTxtSize);
+        paint.setTextAlign(Paint.Align.CENTER);
+
         renderStack = new Stack<>();
 
         // When the screen gets resized re-set the Places/Cities
@@ -173,13 +178,11 @@ public class GameView extends SurfaceView {
             }
         }
 
-        /* ........................................................................................
-           .____________....__________......_______....____________.............................................
-           .|____   ____|...|   ______|.../.....___)...|____   ____|...........................................
-           ......|  |.......|  |______ ...\.....(...........|  |..................................................
-           ......|  |.......|   ______|....\.....\..........|  |....
-           ......|  |.......|  |______.....).....)..........|  |....
-           ......|__|.......|_________|...|.____/...........|__|....
+        /*   _             _
+            | |_ ___  ___ | |_
+            | __/ _ \/ __|| __/
+            | |_  __/\__ \| |_
+             \__\___||___/ \__\
 
          */
 
@@ -196,11 +199,13 @@ public class GameView extends SurfaceView {
         //update viewport
         dstViewport.set(0f, 0f, (float)getWidth(), (float)getHeight());
 
+        /*
         // ----==== City Creation ====----
         // Divide the actual screen/this surfaceView.
         cellWidth = mapWidth/(float)gridCellsX;
         cellHeight = mapHeight/(float)gridCellsY;
         int nameCount = 0;
+
 
         for(int x = 0; x < positionMap.length ; x++) {
             for(int y = 0; y < positionMap[x].length; y++) {
@@ -234,6 +239,10 @@ public class GameView extends SurfaceView {
                 }
             }
         }
+
+         */
+
+        gameState.buildPlace("Bremen", false, 100, 100);
 
         resume();
 
@@ -388,9 +397,9 @@ public class GameView extends SurfaceView {
     }
 
     protected void update() {
-        for(Place toUpdate: gameState.getPlaces()) {
-            toUpdate.getCity().update();
-        }
+        //for(Place toUpdate: gameState.getPlaces()) {
+        //    toUpdate.getCity().update();
+        //}
         for(Player toUpdate: gameState.getPlayers()) {
             toUpdate.getFigure().update();
         }
@@ -422,28 +431,29 @@ public class GameView extends SurfaceView {
         if(surfaceHolder.getSurface().isValid()) {
             canvas = surfaceHolder.lockCanvas();
 
-            dstViewport.set(0, 0, getWidth(), getHeight());
+            // Set Viewport and map-position
             canvas.clipRect(dstViewport);
-
             canvas.translate(viewPortX, viewPortY);
-
             canvas.scale(mapScaleFactor, mapScaleFactor);
-
+            // Start of by clearing the old picture with a new coat of white
             canvas.drawColor(Color.WHITE);
 
-            for(Place toUpdate: gameState.getPlaces()) {
-                toUpdate.getCity().draw(canvas, paint);
+            // Draw Cities
+            for(Place toDraw: gameState.getPlaces()) {
+                toDraw.getCity().draw(canvas, paint);
             }
-            for(Player toUpdate: gameState.getPlayers()) {
-                toUpdate.getFigure().draw(canvas, paint);
+            // Draw detective Figures
+            for(Player toDraw: gameState.getPlayers()) {
+                toDraw.getFigure().draw(canvas, paint);
             }
+            // Draw Mr. X Figure
             if(gameState.getMrX() != null) {
                 gameState.getMrX().getFigure().draw(canvas, paint);
             }
 
             txtPaint.setTextSize(72);
 
-            // --- Map (Debug/Testing) ---
+            // --- Map (Debug/Testing, unfinished) ---
             // onlyBorders.setStyle(Paint.Style.STROKE);
             // onlyBorders.setStrokeWidth(15);
             // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)), -viewPortY, -viewPortX + getWidth(), -viewPortY + (mapHeight / massstab), onlyBorders);
