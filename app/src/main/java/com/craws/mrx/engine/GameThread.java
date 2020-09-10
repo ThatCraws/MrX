@@ -17,16 +17,16 @@ public class GameThread extends Thread {
         // Frame pacing
         long startTime;
         long sleepTime;
-        long ticksPerFrame = 1000 / fps;
+        long ticksPerFrame = 1000000000 / fps;
 
         while(running) {
-            startTime = System.currentTimeMillis();
+            startTime = System.nanoTime();
             view.update();
             view.draw();
-            sleepTime = System.currentTimeMillis() - startTime;
+            sleepTime = System.nanoTime() - startTime;
             try {
                 if (sleepTime < ticksPerFrame) {
-                    sleep(ticksPerFrame - sleepTime);
+                    sleep(ticksPerFrame / 1000000 - sleepTime / 1000000);
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
