@@ -19,7 +19,7 @@ public abstract class Render {
     private int width;
     private int height;
     // all the frames
-    protected int currFrame;
+    protected int currFrame = 0;
 
     // viewport
     protected Rect viewport;
@@ -43,8 +43,6 @@ public abstract class Render {
         height = frameSizeH = bitmap.getHeight() / framesH;
 
         // initiate Viewports on 1st frame, just so they are not null
-        currFrame = 0;
-
         int srcX = (currFrame % framesW) * frameSizeW;
         int srcY = currFrame / framesW * frameSizeH;
 
@@ -69,8 +67,6 @@ public abstract class Render {
         frameSizeH = bitmap.getHeight() / framesH;
 
         // initiate Viewports on 1st frame, just so they are not null
-        currFrame = 0;
-
         int srcX = (currFrame % framesW) * frameSizeW;
         int srcY = currFrame / framesW * frameSizeH;
 

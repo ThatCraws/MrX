@@ -29,6 +29,7 @@ public class City extends Render {
         this.place = place;
 
         currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
+        updateViewport();
     }
 
     public City(final Context context, final Place place, final float x, final float y) {

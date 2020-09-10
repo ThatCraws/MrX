@@ -11,33 +11,40 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
 
-import com.craws.mrx.GameActivity;
+import androidx.annotation.ColorInt;
+
 import com.craws.mrx.graphics.City;
 import com.craws.mrx.graphics.Render;
 import com.craws.mrx.state.GameState;
 import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Player;
 import com.craws.mrx.state.Ticket;
+import com.craws.mrx.state.Vehicle;
+import com.craws.tree.Edge;
 
-import java.util.Arrays;
 import java.util.Stack;
-import java.util.Vector;
 
 
 public class GameView extends SurfaceView {
 
     // ----------- App management -----------
-    private GameActivity parent = null; // Gotta set this after instantiation =( Via setParent
-    Context context;
-
-    // ----------- game engine -----------
+    private Context context;
     private GameThread gameThread;
-    private enum GAME_FLOW {
+    // --- Phase Management ---
+    private OnPhaseChangeListener phaseChangeListener;
+    private GAME_PHASE currPhase;
+    private GAME_PHASE nextPhase;
+    private boolean continuable;
+
+    public enum GAME_PHASE {
+        INTERRUPTED,                // No functionality of the game is given (mainly to display messages to human player)
         MRX_CHOOSE_TURN,            // Move (clicking city) or ability (clicking ticket before city)
         MRX_CHOOSE_ABILITY_TICKETS, // after first Ticket is selected, selected the other two (with same ability, else abort and back to MRX_CHOOSE_TURN)
         MRX_EXTRA_TURN,
         MRX_SPECIAL,
+        MRX_CHOOSE_CITY,
         MRX_MOVE,                   // To move the figure and add to the timeline
         MRX_WIN_CHECK,              // Position check after Mr. X turn (he can't make himself lose). Make Mr. X disappear for detective's turn.
         MRX_THROW_TICKETS,          // Mr. X can throw as many tickets as he wants and then restock to 8 Tickets.
@@ -52,11 +59,14 @@ public class GameView extends SurfaceView {
         DET_THROW_TICKETS           // Even the detective-player is allowed to throw as many tickets as they want and restock (to 4 + No. of controlled detectives)
     }
 
+    // To be displayed by showMessageAndWaitForClick
+    private String userMessage = "";
 
-    // ----------- game state -----------
+    // ----------- game state/map -----------
     private GameState gameState;
     private City selectedCity;
-    private Vector<Ticket> selectedTickets;
+    private InventoryChangeListener inventoryChangeListener;
+    private TimelineChangeListener timelineChangeListener;
 
     // ----------- graphics -----------
     private SurfaceHolder surfaceHolder;
@@ -64,24 +74,11 @@ public class GameView extends SurfaceView {
     private Stack<Render> renderStack;
     private Paint paint;
 
-    public final static float cityTxtSize = 36;
-
-    // To draw the world we divide the map into cells. 28x15 = 420, so that leaves a lot of room to place cities.
-    // The original game has 200, but we will have less (50% of the map being cities would get too cluttered).
-    final static int gridCellsX = 7;
-    final static int gridCellsY = 5;
+    public final static float CITY_TXT_SIZE = 36;
+    public final static float FIGURE_SCALE_FACTOR = .65f;
 
     final static float mapWidth = 3700;
     final static float mapHeight = 2000;
-
-
-    // The number of Cities randomly put on the map
-    final static int numberOfCities = 10;
-    // True on the map means there is a City there
-    boolean[][] positionMap = new boolean[gridCellsX][gridCellsY];
-
-    // TODO REMOVE AFTER TESTING
-    private int theOnePlayer = 0;
 
     /*  ---=============================================================================---
        -----===== Listener for resizing and Display-dependent scaling/positioning =====-----
@@ -123,133 +120,92 @@ public class GameView extends SurfaceView {
     public GameView(Context context) {
         super(context);
         this.context = context;
-        gameThread = new GameThread(this);
 
         scrollDetector = new GestureDetector(context, new ScrollListener());
         scaleDetector = new ScaleGestureDetector(context, new ScaleListener());
 
-        startGame();
+        setupGame();
     }
 
     public GameView(Context context, AttributeSet attrs) {
         super(context, attrs);
         this.context = context;
-        gameThread = new GameThread(this);
 
         scrollDetector = new GestureDetector(context, new ScrollListener());
         scaleDetector = new ScaleGestureDetector(context, new ScaleListener());
 
-        startGame();
+        setupGame();
     }
 
-    private void startGame() {
+    private void setupGame() {
         // ---=== The game-state to display ==---
+        continuable = true;
         // for the map
         gameState = new GameState(context);
         selectedCity = null;
-        selectedTickets = new Vector<>();
 
         // The things to draw (with)
         surfaceHolder = getHolder();
         paint = new Paint();
-        paint.setTextSize(cityTxtSize);
+        paint.setTextSize(CITY_TXT_SIZE);
         paint.setTextAlign(Paint.Align.CENTER);
+        paint.setStrokeWidth(20f);
 
         renderStack = new Stack<>();
 
         // When the screen gets resized re-set the Places/Cities
         surfaceHolder.addCallback(new GameViewListener());
 
-        // The grid we put our Cities in. The map is empty for now
-        for (boolean[] currColumn : positionMap) {
-            Arrays.fill(currColumn, false);
-        }
-
-        // Randomly fill the grid with Cities
-        int cityCount = 0;
-        while(cityCount < numberOfCities) {
-            int randomX = (int)Math.round(Math.random()*(gridCellsX - 1));
-            int randomY = (int)Math.round(Math.random()*(gridCellsY - 1));
-
-            if(!positionMap[randomX][randomY]) {
-                positionMap[randomX][randomY] = true;
-
-                cityCount++;
-            }
-        }
-
-        /*   _             _
-            | |_ ___  ___ | |_
-            | __/ _ \/ __|| __/
-            | |_  __/\__ \| |_
-             \__\___||___/ \__\
-
-         */
-
-        float cellWidth;
-        float cellHeight;
-
         selectedCity = null;
-        selectedTickets = new Vector<>();
-
-        renderStack.clear();
-
-        pause();
 
         //update viewport
         dstViewport.set(0f, 0f, (float)getWidth(), (float)getHeight());
 
-        /*
-        // ----==== City Creation ====----
-        // Divide the actual screen/this surfaceView.
-        cellWidth = mapWidth/(float)gridCellsX;
-        cellHeight = mapHeight/(float)gridCellsY;
-        int nameCount = 0;
+        Place pl_bremen = gameState.buildPlace("Bremen", false, 100, 200);
+        Place pl_hanno = gameState.buildPlace("Hannover", false, 200, 550);
+        Place pl_pig = gameState.buildPlace("Pig", false, 400, 400);
+        Place pl_murica = gameState.buildPlace("Murica", true, 500, 600);
 
+        gameState.buildStreet(pl_pig, pl_bremen, Vehicle.FAST);
+        gameState.buildStreet(pl_pig, pl_hanno, Vehicle.MEDIUM);
+        gameState.buildStreet(pl_pig, pl_murica, Vehicle.SLOW);
 
-        for(int x = 0; x < positionMap.length ; x++) {
-            for(int y = 0; y < positionMap[x].length; y++) {
-                if(positionMap[x][y]) {
-                    Place currentlyAdded = gameState.buildPlace("City" + (nameCount++ + 1), nameCount == 1);
-                    City newRenderCity = currentlyAdded.getCity();
-                    newRenderCity.moveTo(cellWidth * x, cellHeight * y);
+        int det = gameState.addDetective("Detestive", pl_hanno);
+        int mrx = gameState.addMrX(pl_bremen);
 
+        Player detective = gameState.getPlayerByPort(det);
+        Player misterX = gameState.getPlayerByPort(mrx);
 
-                    // Scale to grid
-                    // get the ratio of city-bitmap to grid-size for width and height individually
-                    float scaleFactorW = cellWidth / newRenderCity.getWidth();
-                    float scaleFactorH = cellHeight / newRenderCity.getHeight();
-
-                    // if the width has to be "scaled more" than height to fit into the grid use its scale-factor/ratio
-                    if(scaleFactorW < scaleFactorH) {
-                        newRenderCity.resize((int)((newRenderCity.getWidth() * scaleFactorW) * .9f), (int)((newRenderCity.getHeight() * scaleFactorW) * .9f));
-                    } else {
-                        newRenderCity.resize((int)((newRenderCity.getWidth() * scaleFactorH) * .9f), (int)((newRenderCity.getHeight() * scaleFactorH) * .9f));
-                    }
-                    newRenderCity.moveTo(cellWidth * x + (cellWidth - newRenderCity.getWidth()) / 2, cellHeight * y + (cellHeight - newRenderCity.getHeight()) / 2);
-                    renderStack.add(newRenderCity);
-
-                    if(nameCount == 2) {
-                        gameState.addDetective("The not chosen one");
-                        theOnePlayer = gameState.addDetective("The chosen one");
-                        gameState.getPlayerByPort(theOnePlayer).setPlace(currentlyAdded);
-                        Figure playerOne = gameState.getPlayerByPort(theOnePlayer).getFigure();
-                        playerOne.snapToCurrentCity();
-                    }
-                }
-            }
-        }
-
-         */
-
-        gameState.buildPlace("Bremen", false, 100, 100);
-
-        resume();
-
-        //---------------------------------------------------------------------------------------------------------------
-        //---------------------------------------------------------------------------------------------------------------
+        gameThread = new GameThread(this);
+        //gameThread.setRunning(true);
+        //gameThread.start();
     }
 
+    public void startGame() {
+        showMessageAndWaitForClick("Mr. X's turn. Detectives don't look.", GAME_PHASE.MRX_CHOOSE_TURN);
+
+        fillInventoryX();
+    }
+
+    private void fillInventory() {
+        while(gameState.getInventory().size() < 4 + gameState.getPlayers().size()) {
+            Ticket toAdd = gameState.drawTicket();
+            gameState.giveTicket(1, toAdd);
+            if(inventoryChangeListener != null) {
+                inventoryChangeListener.onAdd(toAdd);
+            }
+        }
+    }
+
+    private void fillInventoryX() {
+        while(gameState.getInventoryX().size() < 8) {
+            Ticket toAdd = gameState.drawTicket();
+            gameState.giveTicket(0, toAdd);
+            if(inventoryChangeListener != null) {
+                inventoryChangeListener.onAdd(toAdd);
+            }
+        }
+    }
 
     /*  ---===============================================---
        -----===== The Camera and Map implementation =====-----
@@ -361,31 +317,42 @@ public class GameView extends SurfaceView {
         }
     }
 
-    // initialized in lines 158
+    // initialized in line 158
     GestureDetector scrollDetector;
     ScaleGestureDetector scaleDetector;
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
-        scaleDetector.onTouchEvent(e);
-        scrollDetector.onTouchEvent(e);
-
-        if (e.getAction() == MotionEvent.ACTION_UP) {
-            if(!scrolling && !scaling) {
-                for (Place place : gameState.getPlaces()) {
-                    if (place.getCity().collisionCheck((e.getX() + (-viewPortX)) * (1 / mapScaleFactor), (e.getY() + (-viewPortY)) * (1 / mapScaleFactor))) {
-                        if (selectedCity != null) {
-                            selectedCity.reset();
-                        }
-                        selectedCity = place.getCity();
-                        selectedCity.select();
-                    }
-                }
-            } else {
-                scrolling = false;
-                scaling = false;
+        // If a user message is displayed
+        if(currPhase == GAME_PHASE.INTERRUPTED) {
+            // When the text is fully displayed and the user is allowed to continue
+            if(continuable) {
+                changePhase(nextPhase);
+                nextPhase = null;
+                return false;
             }
-            performClick();
+        } else {
+
+            scaleDetector.onTouchEvent(e);
+            scrollDetector.onTouchEvent(e);
+
+            if (e.getAction() == MotionEvent.ACTION_UP) {
+                if (!scrolling && !scaling) {
+                    for (Place place : gameState.getPlaces()) {
+                        if (place.getCity().collisionCheck((e.getX() + (-viewPortX)) * (1 / mapScaleFactor), (e.getY() + (-viewPortY)) * (1 / mapScaleFactor))) {
+                            if (selectedCity != null) {
+                                selectedCity.reset();
+                            }
+                            selectedCity = place.getCity();
+                            selectedCity.select();
+                        }
+                    }
+                } else {
+                    scrolling = false;
+                    scaling = false;
+                }
+                performClick();
+            }
         }
         return true;
     }
@@ -397,9 +364,9 @@ public class GameView extends SurfaceView {
     }
 
     protected void update() {
-        //for(Place toUpdate: gameState.getPlaces()) {
-        //    toUpdate.getCity().update();
-        //}
+        for(Place toUpdate: gameState.getPlaces()) {
+            toUpdate.getCity().update();
+        }
         for(Player toUpdate: gameState.getPlayers()) {
             toUpdate.getFigure().update();
         }
@@ -408,63 +375,92 @@ public class GameView extends SurfaceView {
         }
     }
 
-    private Paint txtPaint = new Paint();
     // --- Map (Debug/Testing) ---
     // private Paint onlyBorders = new Paint();
     // float massstab = 8f;
-
-    private Ticket lastUsed;
-
-    public void setLastUsed(Ticket lastUsed) {
-        this.lastUsed = lastUsed;
-    }
-
-    public void moveBitch() {
-        if (selectedCity != null) {
-            gameState.getPlayerByPort(theOnePlayer).setPlace(selectedCity.getPlace());
-            selectedCity.reset();
-            selectedCity = null;
-        }
-    }
+    @ColorInt int currColor = 255;
 
     protected void draw() {
         if(surfaceHolder.getSurface().isValid()) {
             canvas = surfaceHolder.lockCanvas();
 
-            // Set Viewport and map-position
-            canvas.clipRect(dstViewport);
-            canvas.translate(viewPortX, viewPortY);
-            canvas.scale(mapScaleFactor, mapScaleFactor);
-            // Start of by clearing the old picture with a new coat of white
-            canvas.drawColor(Color.WHITE);
+            if(currPhase == GAME_PHASE.INTERRUPTED) {
 
-            // Draw Cities
-            for(Place toDraw: gameState.getPlaces()) {
-                toDraw.getCity().draw(canvas, paint);
+                final int increment = 10;
+                if(currColor - increment > 0) {
+                    canvas.drawColor(Color.rgb(currColor, currColor, currColor));
+                    currColor -= increment;
+                } else {
+                    // paint it, black
+                    canvas.drawColor(Color.BLACK);
+
+                    // remember color now
+                    @ColorInt int prevColor = paint.getColor();
+                    // set color to white
+                    paint.setColor(Color.WHITE);
+
+                    // text in white
+                    canvas.drawText(userMessage, getWidth() / 2f, getHeight() / 2f, paint);
+                    // reset color
+                    paint.setColor(prevColor);
+
+                    continuable = true;
+                }
+            } else {
+
+                // Set Viewport and map-position
+                canvas.clipRect(dstViewport);
+                canvas.translate(viewPortX, viewPortY);
+                canvas.scale(mapScaleFactor, mapScaleFactor);
+                // Start of by clearing the old picture with a new coat of white
+                canvas.drawColor(Color.WHITE);
+
+                // save color so we can restore it later (will/should be black)
+                @ColorInt int prevColor = paint.getColor();
+                // Draw streets
+                for (Edge<Place, Vehicle> currStreet : gameState.getStreets()) {
+                    City start = currStreet.getSource().getData().getCity();
+                    City target = currStreet.getTarget().getData().getCity();
+
+                    float startX = start.getX() + start.getWidth() / 2f;
+                    float startY = start.getY() + start.getHeight() / 2f;
+
+                    float targetX = target.getX() + target.getWidth() / 2f;
+                    float targetY = target.getY() + target.getHeight() / 2f;
+
+                    switch (gameState.getStreet(start.getPlace(), target.getPlace())) {
+                        case SLOW:
+                            paint.setColor(Color.RED);
+                            break;
+                        case MEDIUM:
+                            paint.setColor(Color.YELLOW);
+                            break;
+                        case FAST:
+                            paint.setColor(Color.GREEN);
+                    }
+                    canvas.drawLine(startX, startY, targetX, targetY, paint);
+                }
+                paint.setColor(prevColor);
+
+                // Draw Cities
+                for (Place toDraw : gameState.getPlaces()) {
+                    toDraw.getCity().draw(canvas, paint);
+                }
+                // Draw detective Figures
+                for (Player toDraw : gameState.getPlayers()) {
+                    toDraw.getFigure().draw(canvas, paint);
+                }
+                // Draw Mr. X Figure
+                if (gameState.getMrX() != null) {
+                    gameState.getMrX().getFigure().draw(canvas, paint);
+                }
+
+                // --- Map (Debug/Testing, unfinished) ---
+                // onlyBorders.setStyle(Paint.Style.STROKE);
+                // onlyBorders.setStrokeWidth(15);
+                // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)), -viewPortY, -viewPortX + getWidth(), -viewPortY + (mapHeight / massstab), onlyBorders);
+                // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)) + (-viewPortX / massstab), -viewPortY + (-viewPortY / massstab), (-viewPortX + getWidth() - (mapWidth / massstab)) + (-viewPortX / massstab) + (getWidth() / massstab * (1 / mapScaleFactor)), -viewPortY + (-viewPortY / massstab) + (getHeight() / massstab), onlyBorders);
             }
-            // Draw detective Figures
-            for(Player toDraw: gameState.getPlayers()) {
-                toDraw.getFigure().draw(canvas, paint);
-            }
-            // Draw Mr. X Figure
-            if(gameState.getMrX() != null) {
-                gameState.getMrX().getFigure().draw(canvas, paint);
-            }
-
-            txtPaint.setTextSize(72);
-
-            // --- Map (Debug/Testing, unfinished) ---
-            // onlyBorders.setStyle(Paint.Style.STROKE);
-            // onlyBorders.setStrokeWidth(15);
-            // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)), -viewPortY, -viewPortX + getWidth(), -viewPortY + (mapHeight / massstab), onlyBorders);
-            // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)) + (-viewPortX / massstab), -viewPortY + (-viewPortY / massstab), (-viewPortX + getWidth() - (mapWidth / massstab)) + (-viewPortX / massstab) + (getWidth() / massstab * (1 / mapScaleFactor)), -viewPortY + (-viewPortY / massstab) + (getHeight() / massstab), onlyBorders);
-
-            if(lastUsed != null) {
-                canvas.drawText("Last ticket used:", 1000, 650, txtPaint);
-                canvas.drawText("Vehicle: " + lastUsed.getVehicle(), 1000, 800, txtPaint);
-                canvas.drawText("Ability: " + lastUsed.getAbility(), 1000, 950, txtPaint);
-            }
-
             surfaceHolder.unlockCanvasAndPost(canvas);
         }
 
@@ -490,8 +486,27 @@ public class GameView extends SurfaceView {
      *
      * @param message The message to show the player until he touches the screen.
      */
-    public void showMessageAndWaitForClick(final String message) {
-        // TODO: IMPLEMENT. Don't forget to ignore the touch for the gameplay
+    public void showMessageAndWaitForClick(final String message, final GAME_PHASE phaseAfter) {
+        changePhase(GAME_PHASE.INTERRUPTED);
+        continuable = false;
+
+        userMessage = message;
+        nextPhase = phaseAfter;
+
+        while(currPhase == GAME_PHASE.INTERRUPTED) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void changePhase(final GAME_PHASE phase) {
+        currPhase = phase;
+        if(phaseChangeListener != null) {
+            phaseChangeListener.onPhaseChange(phase);
+        }
     }
 
     // ----------- GETTERS -----------
@@ -500,7 +515,16 @@ public class GameView extends SurfaceView {
         return gameState;
     }
 
-    public void setParent(final GameActivity parent) {
-        this.parent = parent;
+    public void setOnPhaseChangeListener(final OnPhaseChangeListener listener) {
+        phaseChangeListener = listener;
     }
+
+    public void setInventoryChangeListener(final InventoryChangeListener listener) {
+        inventoryChangeListener = listener;
+    }
+
+    public void setTimelineChangeListener(final TimelineChangeListener listener) {
+        timelineChangeListener = listener;
+    }
+
 }

@@ -3,6 +3,7 @@ package com.craws.mrx.graphics;
 import android.content.Context;
 import android.graphics.BitmapFactory;
 
+import com.craws.mrx.engine.GameView;
 import com.craws.mrx.state.Player;
 
 public class Figure extends Render {
@@ -17,6 +18,7 @@ public class Figure extends Render {
         super(BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.player_sprites), 1, 6, 0f, 0f);
         this.player = player;
 
+        resize((int) (getWidth() * GameView.FIGURE_SCALE_FACTOR), (int) (getHeight() * GameView.FIGURE_SCALE_FACTOR));
         snapToCurrentCity();
 
         currFrame = player.getPort();

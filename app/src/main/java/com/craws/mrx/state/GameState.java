@@ -2,6 +2,7 @@ package com.craws.mrx.state;
 
 import android.content.Context;
 
+import com.craws.tree.Edge;
 import com.craws.tree.Tree;
 
 import java.util.Vector;
@@ -18,6 +19,7 @@ public class GameState {
     /* ------ The playing field ------ */
     // The game map will be represented by a Tree consisting of the Places(Structural: Node, Graphical: City) and Routes(Structural: Edge, Graphical: A Line).
     private Tree<Place, Vehicle> map;
+    private Vector<Edge<Place, Vehicle>> streets;
 
     /* ------ The tickets (Vehicle/Ability) ------ */
     // A simulated bag of tickets. Tickets will be drawn on random from here.
@@ -45,6 +47,7 @@ public class GameState {
 
     private void setup() {
         players = new Vector<>();
+        streets = new Vector<>();
 
         bagOfTickets = new Vector<>();
 
@@ -65,10 +68,11 @@ public class GameState {
         }
     }
 
-    private void showTickets() {
-        for(int i = 0; i < bagOfTickets.size(); i++) {
-            System.out.println("Ticket " + i + ": V = " + bagOfTickets.get(i).getVehicle() + "; A = " + bagOfTickets.get(i).getAbility() + ".");
+    public Ticket drawTicket() {
+        if(bagOfTickets.isEmpty()) {
+            return null;
         }
+        return bagOfTickets.remove((int)(Math.random()*(bagOfTickets.size() - 1)));
     }
 
     /**
@@ -119,7 +123,7 @@ public class GameState {
             return;
         }
 
-        map.insertEdge(startIndex, endIndex, ticketNeeded);
+        streets.add(map.insertEdge(startIndex, endIndex, ticketNeeded));
     }
 
     /**
@@ -462,12 +466,20 @@ public class GameState {
         return players;
     }
 
+    public int getHighestPort() {
+        return port - 1;
+    }
+
     public Vector<Place> getPlaces() {
         Vector<Place> toRet = new Vector<>();
         for(int i = 0; i < map.getNumberOfNodes(); i++) {
             toRet.add(map.getNodeData(i));
         }
         return toRet;
+    }
+
+    public Vector<Edge<Place, Vehicle>> getStreets() {
+        return streets;
     }
 
     public Player getMrX() {
