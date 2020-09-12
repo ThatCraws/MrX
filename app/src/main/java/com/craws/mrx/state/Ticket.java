@@ -1,5 +1,7 @@
 package com.craws.mrx.state;
 
+import androidx.annotation.NonNull;
+
 /**
  * Tickets are collected by the players and can be spent for travelling between places or activating abilities.
  *
@@ -23,5 +25,11 @@ public class Ticket {
 
     public  Ability getAbility() {
         return ability;
+    }
+
+    @Override
+    @NonNull
+    public String toString() {
+        return getVehicle() + "/" + getAbility();
     }
 }

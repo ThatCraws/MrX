@@ -1,6 +1,10 @@
 package com.craws.mrx;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.selection.SelectionPredicates;
+import androidx.recyclerview.selection.SelectionTracker;
+import androidx.recyclerview.selection.StableIdKeyProvider;
+import androidx.recyclerview.selection.StorageStrategy;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -8,11 +12,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.RelativeLayout;
 
 import com.craws.mrx.engine.GameView;
 import com.craws.mrx.engine.InventoryChangeListener;
 import com.craws.mrx.engine.OnPhaseChangeListener;
-import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Ticket;
 import com.craws.mrx.state.Timeline;
 
@@ -24,6 +28,7 @@ public class GameActivity extends AppCompatActivity {
     private RecyclerView recInventory;
     private InventoryAdapter adapterInv;
     private RecyclerView recTimeline;
+    private RelativeLayout relativeLayoutInventory;
 
     // The displayed inventory in the RecyclerView. Will have to be built everytime player's change.
     private Vector<Ticket> activeInventory;
@@ -34,6 +39,8 @@ public class GameActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
+        RelativeLayout relativeLayoutInventory = findViewById(R.id.relLayout_inventory);
+
         gameView = findViewById(R.id.gameView);
 
         // Graphical part of the inventory
@@ -41,29 +48,38 @@ public class GameActivity extends AppCompatActivity {
         // Starting with Mr. X's Inventory
         activeInventory = new Vector<>();
         adapterInv = new InventoryAdapter(activeInventory);
-        // DO THIS INSTEAD https://developer.android.com/guide/topics/ui/layout/recyclerview
-        /*adapterInv.setOnItemClickListener(new InventoryAdapter.OnItemClickListener() {
+
+        recInventory.setAdapter(adapterInv);
+
+        SelectionTracker<Long> tracker =
+                new SelectionTracker.Builder<>(
+                        "inventorySelection",
+                        recInventory,
+                        new StableIdKeyProvider(recInventory),
+                        new InventoryItemDetailsLookup(recInventory),
+                        StorageStrategy.createLongStorage())
+                        .withSelectionPredicate(SelectionPredicates.createSelectAnything()).build();
+
+        tracker.addObserver(new SelectionTracker.SelectionObserver<Long>() {
             @Override
-            public void onItemClick(View itemView, int position) {
-                System.out.println("V: " + activeInventory.get(position).getVehicle() + "; A: " + activeInventory.get(position).getAbility());
-                Ticket toRemove = activeInventory.get(position);
-                activeInventory.remove(toRemove);
-                adapterInv.notifyItemRemoved(position);
+            public void onSelectionChanged() {
+                super.onSelectionChanged();
+                Vector<Ticket> selectedTickets = new Vector<>();
+                for(Long currSelection : tracker.getSelection()) {
+                    selectedTickets.add(adapterInv.getTicketById(currSelection));
+                }
+
+                gameView.setSelectedTickets(selectedTickets);
             }
         });
 
-         */
+        adapterInv.setTracker(tracker);
 
-        recInventory.setAdapter(adapterInv);
         recInventory.setLayoutManager(new GridLayoutManager(this, 2));
 
         // The "end turn" button
-        Button theButton = findViewById(R.id.btn_end_turn);
-        theButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-            }
-        });
+        Button theButton = findViewById(R.id.btn_confirm);
+        theButton.setOnClickListener((view) -> gameView.tryToConfirm());
 
         // The graphical representation of the timeline
         recTimeline = findViewById(R.id.recycle_timeline);
@@ -77,14 +93,11 @@ public class GameActivity extends AppCompatActivity {
 
 
         // To manage the game, we listen for phase changes
-        gameView.setOnPhaseChangeListener(new OnPhaseChangeListener() {
-            @Override
-            public void onPhaseChange(final GameView.GAME_PHASE phase) {
-                if (phase == GameView.GAME_PHASE.INTERRUPTED) {
-                    hideMenus();
-                } else {
-                    showMenus();
-                }
+        gameView.setOnPhaseChangeListener((phase) -> {
+            if (phase == GameView.GAME_PHASE.INTERRUPTED) {
+                hideMenus();
+            } else {
+                showMenus();
             }
         });
 
@@ -114,17 +127,25 @@ public class GameActivity extends AppCompatActivity {
     }
 
     public void hideMenus() {
-        if(findViewById(R.id.relLayout_inventory) != null && recTimeline != null) {
-            findViewById(R.id.relLayout_inventory).setVisibility(View.GONE);
-            recTimeline.setVisibility(View.GONE);
-        }
+        runOnUiThread(() -> {
+            relativeLayoutInventory = findViewById(R.id.relLayout_inventory);
+
+            if(relativeLayoutInventory != null && recTimeline != null) {
+                relativeLayoutInventory.setVisibility(View.GONE);
+                recTimeline.setVisibility(View.GONE);
+            }
+        });
     }
 
     public void showMenus() {
-        if(findViewById(R.id.relLayout_inventory) != null && recTimeline != null) {
-            findViewById(R.id.relLayout_inventory).setVisibility(View.VISIBLE);
-            recTimeline.setVisibility(View.VISIBLE);
-        }
+        runOnUiThread(() -> {
+            relativeLayoutInventory = findViewById(R.id.relLayout_inventory);
+
+            if(relativeLayoutInventory != null && recTimeline != null) {
+                relativeLayoutInventory.setVisibility(View.VISIBLE);
+                recTimeline.setVisibility(View.VISIBLE);
+            }
+        });
     }
 
     private void activeInventoryAdd(final Ticket toAdd) {
@@ -147,13 +168,11 @@ public class GameActivity extends AppCompatActivity {
         // RecyclerView may only be changed by the Thread that created it
         runOnUiThread(() -> {
                 int size = activeInventory.size();
-                activeInventory = new Vector<>();
+                activeInventory.clear();
                 adapterInv.notifyItemRangeRemoved(0, size);
 
-                for(int i = 0; i < newInventory.size(); i++) {
-                    activeInventory.add(newInventory.get(i));
-                    adapterInv.notifyItemInserted(i);
-                }
+                activeInventory.addAll(newInventory);
+                adapterInv.notifyItemRangeInserted(0, activeInventory.size() - 1);
         });
     }
 

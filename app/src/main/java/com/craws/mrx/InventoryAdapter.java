@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.selection.SelectionTracker;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.craws.mrx.state.Ticket;
@@ -14,7 +15,6 @@ import com.craws.mrx.state.Ticket;
 import java.util.List;
 
 public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.ViewHolder> {
-
     // When an item/ticket gets clicked we wanna hear about it
     public interface OnItemClickListener {
         void onItemClick(View itemView, int position);
@@ -39,24 +39,34 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
             imageAbility = itemView.findViewById(R.id.image_ability);
 
             // If an InventoryAdapter.OnItemClickListener is set and this item(/ViewHolder) gets clicked, forward the Click-handling to that listener
-            itemView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if(itemClickListener != null) {
-                        int position = getAdapterPosition(); // getAbsoluteAdapterPosition seems to exist only on API 30 and on 29 getAdapterPosition() is "not yet deprecated" I guess
-                        if(position != RecyclerView.NO_POSITION) {
-                            itemClickListener.onItemClick(itemView, position);
-                        }
-                    }
+            itemView.setOnClickListener((view) -> {
+                if (tracker != null) {
+                    tracker.select(getItemId());
                 }
             });
+        }
+
+        public InventoryItemDetailsLookup.ItemDetails<Long> getItemDetails() {
+            return new InventoryItemDetailsLookup.ItemDetails<Long>() {
+                @Override
+                public int getPosition() {
+                    return getAdapterPosition();
+                }
+
+                @Override
+                public Long getSelectionKey() {
+                    return getItemId();
+                }
+            };
         }
     }
 
     private List<Ticket> inventory;
+    private SelectionTracker<Long> tracker = null;
 
     public InventoryAdapter(List<Ticket> inventory) {
         this.inventory = inventory;
+        setHasStableIds(true);
     }
 
     @Override
@@ -97,9 +107,26 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
             default:
                 holder.imageAbility.setImageResource(R.drawable.error);
         }
+
+        if(tracker != null) {
+            holder.itemView.setActivated(tracker.isSelected((long) position));
+        }
     }
     @Override
     public int getItemCount() {
         return inventory.size();
+    }
+
+    @Override
+    public long getItemId(final int position) {
+        return (long)position;
+    }
+
+    public Ticket getTicketById(final long id) {
+        return inventory.get((int)id);
+    }
+
+    public void setTracker(final SelectionTracker<Long> tracker) {
+        this.tracker = tracker;
     }
 }
