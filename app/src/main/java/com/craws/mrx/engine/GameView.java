@@ -11,7 +11,6 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View;
 
 import androidx.annotation.ColorInt;
 
@@ -74,7 +73,7 @@ public class GameView extends SurfaceView {
     private Stack<Render> renderStack;
     private Paint paint;
 
-    public final static float CITY_TXT_SIZE = 36;
+    public final static float DEFAULT_TXT_SIZE = 36;
     public final static float FIGURE_SCALE_FACTOR = .65f;
 
     final static float mapWidth = 3700;
@@ -147,7 +146,7 @@ public class GameView extends SurfaceView {
         // The things to draw (with)
         surfaceHolder = getHolder();
         paint = new Paint();
-        paint.setTextSize(CITY_TXT_SIZE);
+        paint.setTextSize(DEFAULT_TXT_SIZE);
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setStrokeWidth(20f);
 
@@ -177,8 +176,6 @@ public class GameView extends SurfaceView {
         Player misterX = gameState.getPlayerByPort(mrx);
 
         gameThread = new GameThread(this);
-        //gameThread.setRunning(true);
-        //gameThread.start();
     }
 
     public void startGame() {
@@ -398,9 +395,13 @@ public class GameView extends SurfaceView {
                     @ColorInt int prevColor = paint.getColor();
                     // set color to white
                     paint.setColor(Color.WHITE);
+                    Paint smallerTxtPaint = new Paint(paint);
+                    smallerTxtPaint.setTextSize(DEFAULT_TXT_SIZE * 2 / 3);
+                    smallerTxtPaint.setAlpha(255 / 3 * 2);
 
                     // text in white
                     canvas.drawText(userMessage, getWidth() / 2f, getHeight() / 2f, paint);
+                    canvas.drawText("- Touch to continue -", getWidth() / 2f, getHeight() - 75, smallerTxtPaint);
                     // reset color
                     paint.setColor(prevColor);
 

@@ -5,7 +5,7 @@ public class GameThread extends Thread {
 
     private boolean running;
 
-    private static long fps = 30;
+    private static final long fps = 30;
 
     public GameThread(GameView view) {
         this.view = view;

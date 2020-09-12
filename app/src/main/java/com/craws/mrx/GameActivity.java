@@ -108,14 +108,9 @@ public class GameActivity extends AppCompatActivity {
 
 
         // Create new Thread so we can leave onCreate (and access the Views) while starting the game.
-        Thread gameLogic = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                gameView.startGame();
-            }
-        });
+        Thread gameLogic = new Thread(() -> gameView.startGame());
 
-        gameLogic.start();
+       gameLogic.start();
     }
 
     public void hideMenus() {
@@ -134,31 +129,23 @@ public class GameActivity extends AppCompatActivity {
 
     private void activeInventoryAdd(final Ticket toAdd) {
         // RecyclerView may only be changed by the Thread that created it
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                activeInventory.add(toAdd);
-                adapterInv.notifyItemInserted(activeInventory.indexOf(toAdd));
-            }
+        runOnUiThread(() -> {
+            activeInventory.add(toAdd);
+            adapterInv.notifyItemInserted(activeInventory.indexOf(toAdd));
         });
     }
 
     private void activeInventoryRemove(final int position) {
         // RecyclerView may only be changed by the Thread that created it
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                activeInventory.remove(position);
-                adapterInv.notifyItemRemoved(position);
-            }
+        runOnUiThread(() -> {
+            activeInventory.remove(position);
+            adapterInv.notifyItemRemoved(position);
         });
     }
 
     private void activeInventoryNewInventory(final Vector<Ticket> newInventory) {
         // RecyclerView may only be changed by the Thread that created it
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
+        runOnUiThread(() -> {
                 int size = activeInventory.size();
                 activeInventory = new Vector<>();
                 adapterInv.notifyItemRangeRemoved(0, size);
@@ -167,7 +154,6 @@ public class GameActivity extends AppCompatActivity {
                     activeInventory.add(newInventory.get(i));
                     adapterInv.notifyItemInserted(i);
                 }
-            }
         });
     }
 
