@@ -12,20 +12,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.craws.mrx.state.Ticket;
 
+import java.util.Hashtable;
 import java.util.List;
 
 public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.ViewHolder> {
-    // When an item/ticket gets clicked we wanna hear about it
-    public interface OnItemClickListener {
-        void onItemClick(View itemView, int position);
-    }
-
-    private OnItemClickListener itemClickListener;
-
-    // Provide this method for parent-objects to propagate the click-event through to them.
-    public void setOnItemClickListener(final OnItemClickListener listener) {
-        itemClickListener = listener;
-    }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
 
@@ -38,7 +28,6 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
             imageVehicle = itemView.findViewById(R.id.image_vehicle);
             imageAbility = itemView.findViewById(R.id.image_ability);
 
-            // If an InventoryAdapter.OnItemClickListener is set and this item(/ViewHolder) gets clicked, forward the Click-handling to that listener
             itemView.setOnClickListener((view) -> {
                 if (tracker != null) {
                     tracker.select(getItemId());
@@ -78,8 +67,9 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
     }
 
     @Override
-    public void onBindViewHolder(@NonNull InventoryAdapter.ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull InventoryAdapter.ViewHolder holder, final int position) {
         Ticket ticket = inventory.get(position);
+
         ImageView vehicle;
         ImageView ability;
 
@@ -112,6 +102,7 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
             holder.itemView.setActivated(tracker.isSelected((long) position));
         }
     }
+
     @Override
     public int getItemCount() {
         return inventory.size();
@@ -128,5 +119,9 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
 
     public void setTracker(final SelectionTracker<Long> tracker) {
         this.tracker = tracker;
+    }
+
+    public SelectionTracker<Long> getTracker() {
+        return tracker;
     }
 }

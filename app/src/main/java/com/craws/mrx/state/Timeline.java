@@ -1,5 +1,8 @@
 package com.craws.mrx.state;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.util.Vector;
 
 /** The Timeline-class manages the timeline keeping track of the moves of Mr. X. The Tickets will be associated with the Place they were used to visit.
@@ -43,7 +46,7 @@ public class Timeline {
         return tickets.isEmpty() && places.isEmpty();
     }
 
-    public boolean containsPair(Ticket key, Place value) {
+    public boolean containsPair(@Nullable Ticket key, @NonNull Place value) {
         return tickets.contains(key) && places.contains(value);
     }
 
@@ -52,7 +55,7 @@ public class Timeline {
      * @param key The Ticket used in the Round to be added
      * @param value The Place that was travelled to via the Ticket
      */
-    public void addRound(Ticket key, Place value) {
+    public void addRound(@Nullable Ticket key, @NonNull Place value) {
         tickets.add(key);
         places.add(value);
     }
@@ -63,7 +66,7 @@ public class Timeline {
      *              If set to 0, null will be returned. If set as 1, the (first) Ticket used by Mr. X in the first round will be returned.
      * @return The Ticket that was used in the round given
      */
-    public Ticket getTicketForRound(final int round) {
+    public @Nullable Ticket getTicketForRound(final int round) {
         if(round > places.size()) {
             throw new IndexOutOfBoundsException("Asked timeline for a (ticket from a) round that has not been played yet.");
         }
@@ -76,7 +79,7 @@ public class Timeline {
      *              If set to 0, Mr. X's starting position will be returned. If set to 1, the (first) Place Mr. X travelled to will be returned.
      * @return The Ticket that was used in the round given
      */
-    public Place getPlaceForRound(final int round) {
+    public @NonNull Place getPlaceForRound(final int round) {
         if(round > places.size()) {
             throw new IndexOutOfBoundsException("Asked timeline for a (place from a) round that has not been played yet.");
         }

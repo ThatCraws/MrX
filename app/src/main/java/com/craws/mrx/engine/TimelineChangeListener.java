@@ -6,5 +6,5 @@ import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Ticket;
 
 public interface TimelineChangeListener {
-    void onTurnAdded(final Place destination, @Nullable final Ticket ticket);
+    void onTurnAdded(@Nullable final Ticket ticket, final Place destination);
 }

@@ -71,12 +71,17 @@ public class GameView extends SurfaceView {
 
     // ----------- game state/map -----------
     private GameState gameState;
-
-    private City selectedCity;
-    private Vector<Ticket> selectedTickets;
-
+    // inform activity/update recyclerViews
     private InventoryChangeListener inventoryChangeListener;
     private TimelineChangeListener timelineChangeListener;
+    // keep track of selection
+    private City selectedCity;
+    private Vector<Ticket> selectedTickets;
+    // to preserve the above values which might otherwise get re-polled between testing values for validity and actually using them for actions
+    // these do not get set each iteration, but only when the move got confirmed, so they can't be changed before
+    // the confirmed action is applied (clicking confirm in the same tick as unselecting ticket for example would lead to NullPointerException)
+    Place toTravelTo;
+    Vector<Ticket> toUseForTravel;
 
     // ----------- graphics -----------
     private SurfaceHolder surfaceHolder;
@@ -163,10 +168,14 @@ public class GameView extends SurfaceView {
         currPhase = GAME_PHASE.UNINITIALIZED;
         nextPhase = GAME_PHASE.UNINITIALIZED;
         continuable = true;
+
         // for the map
         gameState = new GameState(context);
         selectedTickets = new Vector<>();
         selectedCity = null;
+        // helpers (like selectedTickets(RightNow) and selectedCity(RightNow), but not overwritten every game loop iteration)
+        toTravelTo = null;
+        toUseForTravel = new Vector<>();
 
         // The things to draw (with)
         surfaceHolder = getHolder();
@@ -203,20 +212,36 @@ public class GameView extends SurfaceView {
     }
 
     public void startGame() {
+        // true as long as the game is not won/lost
         playing = true;
 
-        Player currentPlayer;
+        // To give to the recycler
+        activeInventory = new Vector<>();
 
-        boolean firstPhaseIteration = true;
+        // Since we can also go back in phases, this flag is to only show the notification whose turn it is once.
+        firstPhaseIteration = true;
 
-        Vector<Ticket> activeInventory = new Vector<>();
+        // Set start position of Mr. X
+        gameState.getTimeline().addRound(null, gameState.getMrX().getPlace());
+        if(timelineChangeListener != null) {
+            timelineChangeListener.onTurnAdded(null, gameState.getMrX().getPlace());
+        }
 
+        gameLoop();
+    }
+
+    // These are directly bound to the game loop so they are here and not with the other class-members
+    Vector<Ticket> activeInventory;
+    private boolean firstPhaseIteration = true;
+
+    public void gameLoop() {
         // ----===== GAME LOOP =====-----
         while(playing) {
 
             City selectedCityRightNow = selectedCity;
             Vector<Ticket> selectedTicketsRightNow = selectedTickets;
 
+            //System.out.println(currPhase);
             switch (currPhase) {
                 case UNINITIALIZED:
                 case MRX_CHOOSE_TURN: { // ----===== Mr. X's turn starts =====-----
@@ -238,9 +263,11 @@ public class GameView extends SurfaceView {
                         Vehicle connection = gameState.getStreet(gameState.getMrX().getPlace(), selectedCityRightNow.getPlace());
                         if (connection != null) {
                             changePhase(GAME_PHASE.MRX_CHOOSE_TICKET);
+                            break;
                         }
-                        // A ticket was selected
-                    } else if (!selectedTicketsRightNow.isEmpty()) {
+                    }
+                    // if we got here then no city that is currently reachable is selected.
+                    if (!selectedTicketsRightNow.isEmpty()) {
                         changePhase(GAME_PHASE.MRX_CHOOSE_ABILITY_TICKETS);
                     }
                     break;
@@ -255,6 +282,9 @@ public class GameView extends SurfaceView {
                         if (selectedTicketsRightNow.get(0).getVehicle() == gameState.getStreet(gameState.getMrX().getPlace(), selectedCityRightNow.getPlace())) {
                             changePhase(GAME_PHASE.MRX_CONFIRM_MOVE);
                         }
+                    // if the player selects more than one ticket we assume he wants to activate an ability instead
+                    } else if (selectedTicketsRightNow.size() > 1) {
+                        changePhase(GAME_PHASE.MRX_CHOOSE_ABILITY_TICKETS);
                     }
                     break;
                 }
@@ -263,6 +293,13 @@ public class GameView extends SurfaceView {
                     // if tickets get deselected go back to mrx choosing what to do this turn
                     if (selectedTicketsRightNow == null || selectedTicketsRightNow.size() == 0) {
                         changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
+                     // if one ticket and a (neighbouring) city are selected, we will assume the player tries to move instead.
+                    } else if (selectedCityRightNow != null && selectedTicketsRightNow.size() == 1) {
+                        // is city connected to MrX's current position?
+                        Vehicle connection = gameState.getStreet(gameState.getMrX().getPlace(), selectedCityRightNow.getPlace());
+                        if (connection != null) {
+                            changePhase(GAME_PHASE.MRX_CHOOSE_TICKET);
+                        }
                     } else if (selectedTicketsRightNow.size() == 3) {
                         // first tickets ability is the one to be activated
                         Ability toActivate = selectedTicketsRightNow.get(0).getAbility();
@@ -291,12 +328,24 @@ public class GameView extends SurfaceView {
                     // If Tickets or City get deselected go back to choosing what to do
                     if(selectedTicketsRightNow == null || selectedTicketsRightNow.size() != 1 || selectedCityRightNow == null) {
                         changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
+                    // Also go back if a city gets selected that is not connected to Mr. X's position or the connecting street can't be travelled with the selected ticket
+                    } else if (gameState.getStreet(gameState.getMrX().getPlace(), selectedCity.getPlace()) != selectedTicketsRightNow.get(0).getVehicle()) {
+                        changePhase(GAME_PHASE.MRX_CHOOSE_ABILITY_TICKETS);
                     }
                     break;
                 }
 
-                case MRX_MOVE: {
-                    System.out.println("Move");
+                case MRX_MOVE: { // ----===== move got confirmed and the tickets and place saved =====-----
+                    // GameState uses Vector.remove to take Ticket. This uses the first occurence just as Vector.indexOf, so we use that to get the index.
+                    int ticketIndex = activeInventory.indexOf(toUseForTravel.get(0));
+                    gameState.doMove(0,toTravelTo, toUseForTravel.get(0));
+                    if(inventoryChangeListener != null) {
+                        inventoryChangeListener.onRemove(ticketIndex);
+                    }
+                    if(timelineChangeListener != null) {
+                        timelineChangeListener.onTurnAdded(toUseForTravel.get(0), toTravelTo);
+                    }
+                    changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
                     break;
                 }
 
@@ -315,6 +364,10 @@ public class GameView extends SurfaceView {
         }
     }
 
+    public void setPlaying(final boolean playing) {
+        this.playing = playing;
+    }
+
     private void fillInventory() {
         while(gameState.getInventory().size() < 4 + gameState.getPlayers().size()) {
             Ticket toAdd = gameState.drawTicket();
@@ -329,17 +382,27 @@ public class GameView extends SurfaceView {
         }
     }
 
-    public void tryToConfirm() {
-        Vector<Ticket> selectedTicketsRightNow = selectedTickets;
-        City selectedCityRightNow = selectedCity;
+    public void confirmSelection() {
+        toUseForTravel = new Vector<>(selectedTickets);
+
         switch(currPhase) {
             case MRX_CONFIRM_MOVE: {
+                // if city was deselected in the meantime
+                if(selectedCity == null) {
+                    changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
+                    return;
+                }
+
+                toTravelTo = selectedCity.getPlace();
+                selectedCity.deselect();
+                selectedCity = null;
+
                 changePhase(GAME_PHASE.MRX_MOVE);
                 break;
             }
             case MRX_CONFIRM_ABILITY: {
-                if(selectedTicketsRightNow != null && selectedTicketsRightNow.size() == 3) {
-                    if(selectedTicketsRightNow.get(0).getAbility() == Ability.EXTRA_TURN) {
+                if(toUseForTravel.size() == 3) {
+                    if(toUseForTravel.get(0).getAbility() == Ability.EXTRA_TURN) {
                         changePhase(GAME_PHASE.MRX_EXTRA_TURN);
                     } else {
                         changePhase(GAME_PHASE.MRX_SPECIAL);
@@ -648,6 +711,8 @@ public class GameView extends SurfaceView {
                         helpText = "Confirm selection to make your move";
                         break;
                     case MRX_MOVE:
+                        helpText = "I'm walkin' hee'.";
+                        break;
                     case MRX_EXTRA_TURN:
                     case MRX_SPECIAL:
                         helpText = "Doing the move";

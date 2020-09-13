@@ -10,6 +10,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.craws.mrx.state.Ticket;
 import com.craws.mrx.state.Timeline;
 import com.craws.mrx.state.Vehicle;
 
@@ -46,7 +47,24 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
 
     @Override
     public void onBindViewHolder(@NonNull TimelineAdapter.ViewHolder holder, int position) {
-        Vehicle vehicle = tl.getTicketForRound(position).getVehicle();
+        // Set text showing place name
+        holder.txt_place.setText(tl.getPlaceForRound(position).getName());
+
+        // Set text showing round number
+        holder.txt_itemCount.setText(R.string.timeline_move_count);
+        holder.txt_itemCount.append(String.valueOf(position));
+
+        // Get vehicle (might be null)
+        Vehicle vehicle;
+        Ticket ticket = tl.getTicketForRound(position);
+
+        if(ticket != null) {                // check if Ticket is null, coz
+            vehicle = ticket.getVehicle();  // <- calling .getVehicle
+        } else {
+        // Ticket in Timeline should only be null if it's the first round, so display the start graphic
+            holder.img_Vehicle.setImageResource(R.drawable.vehicle_start);
+            return;
+        }
 
         switch(vehicle) {
             case SLOW:
@@ -61,11 +79,6 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
             default:
                 holder.img_Vehicle.setImageResource(R.drawable.error);
         }
-
-        holder.txt_place.setText(tl.getPlaceForRound(position).getName());
-
-        holder.txt_itemCount.setText(R.string.timeline_move_count);
-        holder.txt_itemCount.append(String.valueOf(position));
     }
 
     @Override
