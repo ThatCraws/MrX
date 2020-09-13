@@ -76,6 +76,9 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
             case FAST:
                 holder.img_Vehicle.setImageResource(R.drawable.vehicle_fast);
                 break;
+            case SHADOW:
+                holder.img_Vehicle.setImageResource(R.drawable.vehicle_shadow);
+                break;
             default:
                 holder.img_Vehicle.setImageResource(R.drawable.error);
         }

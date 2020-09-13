@@ -46,9 +46,13 @@ public class GameView extends SurfaceView {
         MRX_CHOOSE_TURN,            // Move (clicking city) or ability (clicking ticket before city)
         MRX_CHOOSE_ABILITY_TICKETS, // after first Ticket is selected, selected the other two (with same ability, else abort and back to MRX_CHOOSE_TURN
         MRX_CONFIRM_ABILITY,        // when all necessary Tickets are selected, ask to confirm to spend the tickets and activate the ability -> MRX_EXTRA_TURN or MRX_SPECIAL
-        MRX_EXTRA_TURN,
-        MRX_SPECIAL,
-        MRX_CHOOSE_CITY,            // This phase is exclusively for abilities and will be entered once or twice depending on the ability.
+        MRX_EXTRA_TURN,             // The usage of the ability has been confirmed here. Prepare.
+        MRX_EXTRA_TURN_ONE,
+        MRX_EXTRA_TURN_TWO,
+        MRX_SPECIAL,                // The usage of the ability has been confirmed. Prepare.
+        MRX_SPECIAL_CHOOSE_CITY,
+        MRX_SPECIAL_CONFIRM,
+        MRX_SPECIAL_MOVE,
 
         MRX_CHOOSE_TICKET,          // If no ability has been selected (but a City to move to), choose Ticket to move with.
         MRX_CONFIRM_MOVE,           // When a ticket matching the street to be travelled upon is selected, wait for confirmation to actually make the move
@@ -345,7 +349,7 @@ public class GameView extends SurfaceView {
                     if(timelineChangeListener != null) {
                         timelineChangeListener.onTurnAdded(toUseForTravel.get(0), toTravelTo);
                     }
-                    changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
+                    changePhase(GAME_PHASE.MRX_CHOOSE_TURN); // TODO: WIN-CONDITION CHECK
                     break;
                 }
 
@@ -354,7 +358,41 @@ public class GameView extends SurfaceView {
                     break;
                 }
                 case MRX_SPECIAL: {
-                    System.out.println("Special");
+                    Vector<Ticket> inventory = new Vector<>(gameState.getInventoryX());
+                    // Remove the tickets from the GameActivity-copy of the inventory first, to have access to the indexOf
+                    for(Ticket currTicket: toUseForTravel) {
+                        if(inventoryChangeListener != null) {
+                            inventoryChangeListener.onRemove(inventory.indexOf(currTicket));
+                            inventory.remove(currTicket);
+                        }
+                    }
+
+                    gameState.activateAbility(0,toUseForTravel, Ability.SPECIAL);
+
+                    changePhase(GAME_PHASE.MRX_SPECIAL_CHOOSE_CITY);
+                    break;
+                }
+                case MRX_SPECIAL_CHOOSE_CITY: {
+                    if(selectedCity != null && gameState.getStreet(gameState.getMrX().getPlace(), selectedCity.getPlace()) != null) {
+                        changePhase(GAME_PHASE.MRX_SPECIAL_CONFIRM);
+
+                    }
+                    break;
+                }
+                case MRX_SPECIAL_CONFIRM:
+                    // if city gets deselected or other (non-reachable) city gets selected, go back
+                    if(selectedCity == null || gameState.getStreet(gameState.getMrX().getPlace(), selectedCity.getPlace()) == null) {
+                        changePhase(GAME_PHASE.MRX_SPECIAL_CHOOSE_CITY);
+                    }
+                    break;
+                case MRX_SPECIAL_MOVE: {
+                    Ticket ticketOfShadows = new Ticket(Vehicle.SHADOW, Ability.SHADOW);
+                    gameState.doFreeMove(0, toTravelTo);
+                    gameState.getTimeline().addRound(ticketOfShadows, toTravelTo);
+                    if(timelineChangeListener != null) {
+                        timelineChangeListener.onTurnAdded(ticketOfShadows, toTravelTo);
+                    }
+                    changePhase(GAME_PHASE.MRX_CHOOSE_TURN); // TODO: WIN-CONDITION CHECK
                     break;
                 }
                 default:
@@ -389,7 +427,6 @@ public class GameView extends SurfaceView {
             case MRX_CONFIRM_MOVE: {
                 // if city was deselected in the meantime
                 if(selectedCity == null) {
-                    changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
                     return;
                 }
 
@@ -408,6 +445,20 @@ public class GameView extends SurfaceView {
                         changePhase(GAME_PHASE.MRX_SPECIAL);
                     }
                 }
+                break;
+            }
+            case MRX_SPECIAL_CONFIRM: {
+                // if city was deselected in the meantime
+                if(selectedCity == null) {
+                    return;
+                }
+
+                toTravelTo = selectedCity.getPlace(); // Not checking if the street is connected here again brings a tiny risk for a bug/exploit.
+                                                        // Let's see, if someone uses it in a speedrun. It'd be a frame perfect trick.
+                selectedCity.deselect();
+                selectedCity = null;
+
+                changePhase(GAME_PHASE.MRX_SPECIAL_MOVE);
                 break;
             }
         }
@@ -695,7 +746,7 @@ public class GameView extends SurfaceView {
                     gameState.getMrX().getFigure().draw(canvas, paint);
                 }
 
-                String helpText = "";
+                String helpText;
                 switch (currPhase) {
                     case MRX_CHOOSE_TURN:
                         helpText = "Click city to move to or the ticket with the ability to activate.";
@@ -708,15 +759,25 @@ public class GameView extends SurfaceView {
                         break;
                     case MRX_CONFIRM_ABILITY:
                     case MRX_CONFIRM_MOVE:
+                    case MRX_SPECIAL_CONFIRM:
                         helpText = "Confirm selection to make your move";
                         break;
                     case MRX_MOVE:
                         helpText = "I'm walkin' hee'.";
                         break;
                     case MRX_EXTRA_TURN:
-                    case MRX_SPECIAL:
                         helpText = "Doing the move";
                         break;
+                    case MRX_SPECIAL: // Since this process is invisible to the user, just show him the next message already
+                    case MRX_SPECIAL_CHOOSE_CITY:
+                        helpText = "Choose city to sneak to";
+                        break;
+
+                    case MRX_SPECIAL_MOVE:
+                        helpText = "psst";
+                        break;
+                    default:
+                        helpText = "";
                 }
 
                 canvas.drawText(helpText, -viewPortX + (getWidth() * (1/mapScaleFactor) / 2f), -viewPortY + getHeight() * (1/mapScaleFactor) - 75, paint);

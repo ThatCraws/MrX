@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -32,7 +33,7 @@ public class GameActivity extends AppCompatActivity {
     private TimelineAdapter adapterTL;
     private RelativeLayout relativeLayoutInventory;
 
-    // The displayed inventory in the RecyclerView. Will have to be built everytime player's change.
+    // The displayed inventory in the RecyclerView. Will have to be built every time player's change.
     private Vector<Ticket> activeInventory;
     private Timeline timeline;
 
@@ -184,12 +185,12 @@ public class GameActivity extends AppCompatActivity {
     private void activeInventoryRemove(final int position) {
         // RecyclerView may only be changed by the Thread that created it
         runOnUiThread(() -> {
-            activeInventory.remove(position);
-            adapterInv.notifyDataSetChanged();
-            adapterInv.notifyItemRemoved(position);
             if (adapterInv.getTracker() != null) {
                 adapterInv.getTracker().clearSelection();
             }
+            activeInventory.remove(position);
+            adapterInv.notifyItemRemoved(position);
+
         });
     }
 

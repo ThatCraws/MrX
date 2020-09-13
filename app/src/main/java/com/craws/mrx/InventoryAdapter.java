@@ -99,7 +99,7 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
         }
 
         if(tracker != null) {
-            holder.itemView.setActivated(tracker.isSelected((long) position));
+            holder.itemView.setActivated(tracker.isSelected(getItemId(position)));
         }
     }
 
@@ -110,11 +110,16 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
 
     @Override
     public long getItemId(final int position) {
-        return (long)position;
+        return inventory.get(position).hashCode();
     }
 
     public Ticket getTicketById(final long id) {
-        return inventory.get((int)id);
+        for(Ticket currTicket: inventory) {
+            if(currTicket.hashCode() == (int)id) {
+                return currTicket;
+            }
+        }
+        return null;
     }
 
     public void setTracker(final SelectionTracker<Long> tracker) {
