@@ -23,6 +23,24 @@ public class InventoryItemDetailsLookup extends ItemDetailsLookup<Long> {
             InventoryAdapter.ViewHolder clickedViewHolder = (InventoryAdapter.ViewHolder)(recycly.getChildViewHolder(clicked));
 
             return clickedViewHolder.getItemDetails();
+
+
+            /*
+            return new InventoryItemDetailsLookup.ItemDetails<Long>() {
+                @Override
+                public int getPosition() {
+                    return clickedViewHolder.getAdapterPosition();
+                }
+
+                @Override
+                public Long getSelectionKey() {
+                    return clickedViewHolder.getItemId();
+                }
+            };
+
+             */
+
+
         }
         return null;
     }

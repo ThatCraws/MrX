@@ -7,6 +7,9 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.selection.ItemDetailsLookup;
+import androidx.recyclerview.selection.ItemKeyProvider;
 import androidx.recyclerview.selection.SelectionTracker;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -35,7 +38,7 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
             });
         }
 
-        public InventoryItemDetailsLookup.ItemDetails<Long> getItemDetails() {
+        public ItemDetailsLookup.ItemDetails<Long> getItemDetails() {
             return new InventoryItemDetailsLookup.ItemDetails<Long>() {
                 @Override
                 public int getPosition() {
@@ -44,7 +47,7 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
 
                 @Override
                 public Long getSelectionKey() {
-                    return getItemId();
+                    return (long)inventory.get(getAdapterPosition()).hashCode();
                 }
             };
         }
@@ -53,7 +56,7 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
     private List<Ticket> inventory;
     private SelectionTracker<Long> tracker = null;
 
-    public InventoryAdapter(List<Ticket> inventory, final RecyclerView parent) {
+    public InventoryAdapter(List<Ticket> inventory) {
         this.inventory = inventory;
         setHasStableIds(true);
     }
@@ -110,21 +113,18 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
 
     @Override
     public long getItemId(final int position) {
-        //return inventory.get(position).hashCode();
-        return position;
+
+        return ((long) inventory.get(position).hashCode());
     }
 
     public Ticket getTicketById(final long id) {
-        /*for(Ticket currTicket: inventory) {
+
+        for(Ticket currTicket: inventory) {
             if((long)currTicket.hashCode() == id) {
                 return currTicket;
             }
         }
         return null;
-
-         */
-
-        return inventory.get((int)id);
     }
 
     public void setTracker(final SelectionTracker<Long> tracker) {
