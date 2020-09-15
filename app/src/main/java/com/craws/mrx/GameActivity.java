@@ -42,15 +42,13 @@ public class GameActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
-        RelativeLayout relativeLayoutInventory = findViewById(R.id.relLayout_inventory);
-
         gameView = findViewById(R.id.gameView);
 
         // Graphical part of the inventory
         recInventory = findViewById(R.id.recycViewInventory);
         // Starting with Mr. X's Inventory
         activeInventory = new Vector<>();
-        adapterInv = new InventoryAdapter(activeInventory);
+        adapterInv = new InventoryAdapter(activeInventory, recInventory);
 
         recInventory.setAdapter(adapterInv);
 
@@ -68,7 +66,7 @@ public class GameActivity extends AppCompatActivity {
             public void onSelectionChanged() {
                 super.onSelectionChanged();
                 Vector<Ticket> selectedTickets = new Vector<>();
-                for(Long currSelection : tracker.getSelection()) {
+                for(long currSelection : tracker.getSelection()) {
                     selectedTickets.add(adapterInv.getTicketById(currSelection));
                 }
                 System.out.println(selectedTickets);
@@ -176,9 +174,6 @@ public class GameActivity extends AppCompatActivity {
             int nextIndex = activeInventory.size();
             activeInventory.add(toAdd);
             adapterInv.notifyItemInserted(nextIndex);
-            if(adapterInv.getTracker() != null) {
-                adapterInv.getTracker().clearSelection();
-            }
         });
     }
 
@@ -188,8 +183,13 @@ public class GameActivity extends AppCompatActivity {
             if (adapterInv.getTracker() != null) {
                 adapterInv.getTracker().clearSelection();
             }
+
             activeInventory.remove(position);
-            adapterInv.notifyItemRemoved(position);
+            if(position == 0) {
+                adapterInv.notifyDataSetChanged();
+            } else {
+                adapterInv.notifyItemRemoved(position);
+            }
 
         });
     }
@@ -205,7 +205,7 @@ public class GameActivity extends AppCompatActivity {
             adapterInv.notifyItemRangeRemoved(0, size);
 
             activeInventory.addAll(newInventory);
-            adapterInv.notifyItemRangeInserted(0, activeInventory.size() - 1);
+            adapterInv.notifyItemRangeInserted(0, activeInventory.size());
         });
     }
 

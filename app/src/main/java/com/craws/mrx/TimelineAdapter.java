@@ -19,14 +19,12 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
     public class ViewHolder extends RecyclerView.ViewHolder {
         private TextView txt_itemCount;
         private ImageView img_Vehicle;
-        private TextView txt_place;
 
         public ViewHolder(final View itemView) {
             super(itemView);
 
             txt_itemCount = itemView.findViewById(R.id.text_itemCount);
             img_Vehicle = itemView.findViewById(R.id.TL_image_vehicle);
-            txt_place = itemView.findViewById(R.id.text_place);
         }
 
     }
@@ -47,12 +45,13 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
 
     @Override
     public void onBindViewHolder(@NonNull TimelineAdapter.ViewHolder holder, int position) {
-        // Set text showing place name
-        holder.txt_place.setText(tl.getPlaceForRound(position).getName());
-
         // Set text showing round number
-        holder.txt_itemCount.setText(R.string.timeline_move_count);
-        holder.txt_itemCount.append(String.valueOf(position));
+        if(position == 0) {
+            holder.txt_itemCount.setText(R.string.timeline_move_start);
+        } else {
+            holder.txt_itemCount.setText(R.string.timeline_move_count);
+            holder.txt_itemCount.append(String.valueOf(position));
+        }
 
         // Get vehicle (might be null)
         Vehicle vehicle;

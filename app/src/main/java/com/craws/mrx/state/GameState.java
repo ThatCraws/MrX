@@ -478,6 +478,15 @@ public class GameState {
         return toRet;
     }
 
+    public Vector<Place> getSurroundingPlaces(final Place toCheck) {
+        Vector<Place> toRet = new Vector<>();
+        Vector<Integer> surroundingPlaceIDs = map.getAdjacentNodeIDs(map.getIndexByData(toCheck));
+        for(int i = 0; i < surroundingPlaceIDs.size(); i++) {
+            toRet.add(map.getNodeData(surroundingPlaceIDs.get(i)));
+        }
+        return toRet;
+     }
+
     public Vector<Edge<Place, Vehicle>> getStreets() {
         return streets;
     }

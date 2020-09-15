@@ -42,13 +42,17 @@ public class GameView extends SurfaceView {
 
     public enum GAME_PHASE {
         UNINITIALIZED,
+        INITIALIZE,
         INTERRUPTED,                // No functionality of the game is given (mainly to display messages to human player)
         MRX_CHOOSE_TURN,            // Move (clicking city) or ability (clicking ticket before city)
         MRX_CHOOSE_ABILITY_TICKETS, // after first Ticket is selected, selected the other two (with same ability, else abort and back to MRX_CHOOSE_TURN
         MRX_CONFIRM_ABILITY,        // when all necessary Tickets are selected, ask to confirm to spend the tickets and activate the ability -> MRX_EXTRA_TURN or MRX_SPECIAL
         MRX_EXTRA_TURN,             // The usage of the ability has been confirmed here. Prepare.
-        MRX_EXTRA_TURN_ONE,
-        MRX_EXTRA_TURN_TWO,
+        MRX_EXTRA_TURN_CHOOSE_TURN, // Wait for user to select one ticket and one directly connected city
+        MRX_EXTRA_TURN_CONFIRM,
+        MRX_EXTRA_TURN_MOVE,
+        MRX_EXTRA_TURN_NOT_POSSIBLE,
+
         MRX_SPECIAL,                // The usage of the ability has been confirmed. Prepare.
         MRX_SPECIAL_CHOOSE_CITY,
         MRX_SPECIAL_CONFIRM,
@@ -200,10 +204,15 @@ public class GameView extends SurfaceView {
         Place pl_hanno = gameState.buildPlace("Hannover", false, 200, 550);
         Place pl_pig = gameState.buildPlace("Pig", false, 400, 400);
         Place pl_murica = gameState.buildPlace("Murica", true, 500, 600);
+        Place pl_kaffstadt = gameState.buildPlace("Kaffster", false, 600, 475);
+        Place pl_berlin = gameState.buildPlace("Berlin", false, 550, 300);
 
         gameState.buildStreet(pl_pig, pl_bremen, Vehicle.FAST);
         gameState.buildStreet(pl_pig, pl_hanno, Vehicle.MEDIUM);
         gameState.buildStreet(pl_pig, pl_murica, Vehicle.SLOW);
+        gameState.buildStreet(pl_pig, pl_kaffstadt, Vehicle.MEDIUM);
+        gameState.buildStreet(pl_murica, pl_kaffstadt, Vehicle.MEDIUM);
+        gameState.buildStreet(pl_berlin, pl_kaffstadt, Vehicle.FAST);
 
         int det = gameState.addDetective("Detestive", pl_hanno);
         int mrx = gameState.addMrX(pl_bremen);
@@ -219,11 +228,10 @@ public class GameView extends SurfaceView {
         // true as long as the game is not won/lost
         playing = true;
 
-        // To give to the recycler
-        activeInventory = new Vector<>();
-
         // Since we can also go back in phases, this flag is to only show the notification whose turn it is once.
         firstPhaseIteration = true;
+
+        activeInventory = new Vector<>();
 
         // Set start position of Mr. X
         gameState.getTimeline().addRound(null, gameState.getMrX().getPlace());
@@ -237,6 +245,7 @@ public class GameView extends SurfaceView {
     // These are directly bound to the game loop so they are here and not with the other class-members
     Vector<Ticket> activeInventory;
     private boolean firstPhaseIteration = true;
+    private int extraTurnCounter = 0;
 
     public void gameLoop() {
         // ----===== GAME LOOP =====-----
@@ -245,17 +254,18 @@ public class GameView extends SurfaceView {
             City selectedCityRightNow = selectedCity;
             Vector<Ticket> selectedTicketsRightNow = selectedTickets;
 
-            //System.out.println(currPhase);
             switch (currPhase) {
-                case UNINITIALIZED:
+                case UNINITIALIZED: {
+                    showMessageAndWaitForClick("Mr. X's turn. Detectives don't look.", GAME_PHASE.MRX_CHOOSE_TURN);
+
+                    //if (inventoryChangeListener != null) {
+                    //    inventoryChangeListener.onNewInventory(gameState.getInventoryX());
+                    //}
+                }
                 case MRX_CHOOSE_TURN: { // ----===== Mr. X's turn starts =====-----
-                    if (firstPhaseIteration) {
-                        showMessageAndWaitForClick("Mr. X's turn. Detectives don't look.", GAME_PHASE.MRX_CHOOSE_TURN);
-                        firstPhaseIteration = false;
-                    }
 
                     if (!activeInventory.equals(gameState.getInventoryX())) {
-                        activeInventory = gameState.getInventoryX();
+                        activeInventory = new Vector<>(gameState.getInventoryX());
                         if (inventoryChangeListener != null) {
                             inventoryChangeListener.onNewInventory(activeInventory);
                         }
@@ -329,7 +339,7 @@ public class GameView extends SurfaceView {
                 }
 
                 case MRX_CONFIRM_MOVE: { // ----===== waiting for Mr. X to confirm to move and use the selected ticket =====-----
-                    // If Tickets or City get deselected go back to choosing what to do
+                    // If Tickets or City get deselected (or more than one ticket) go back to choosing what to do
                     if(selectedTicketsRightNow == null || selectedTicketsRightNow.size() != 1 || selectedCityRightNow == null) {
                         changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
                     // Also go back if a city gets selected that is not connected to Mr. X's position or the connecting street can't be travelled with the selected ticket
@@ -340,8 +350,9 @@ public class GameView extends SurfaceView {
                 }
 
                 case MRX_MOVE: { // ----===== move got confirmed and the tickets and place saved =====-----
-                    // GameState uses Vector.remove to take Ticket. This uses the first occurence just as Vector.indexOf, so we use that to get the index.
+                    // GameState uses Vector.remove to take Ticket. This uses the first occurrence just as Vector.indexOf, so we use that to get the index.
                     int ticketIndex = activeInventory.indexOf(toUseForTravel.get(0));
+                    activeInventory.remove(ticketIndex);
                     gameState.doMove(0,toTravelTo, toUseForTravel.get(0));
                     if(inventoryChangeListener != null) {
                         inventoryChangeListener.onRemove(ticketIndex);
@@ -349,54 +360,189 @@ public class GameView extends SurfaceView {
                     if(timelineChangeListener != null) {
                         timelineChangeListener.onTurnAdded(toUseForTravel.get(0), toTravelTo);
                     }
-                    changePhase(GAME_PHASE.MRX_CHOOSE_TURN); // TODO: WIN-CONDITION CHECK
+                    changePhase(GAME_PHASE.MRX_WIN_CHECK);
                     break;
                 }
 
-                case MRX_EXTRA_TURN: {
-                    System.out.println("Extra turn");
-                    break;
-                }
-                case MRX_SPECIAL: {
+                case MRX_EXTRA_TURN: { // ----===== extra turn ability got confirmed, check if possible and throw tickets or tell user they can't =====-----
                     Vector<Ticket> inventory = new Vector<>(gameState.getInventoryX());
-                    // Remove the tickets from the GameActivity-copy of the inventory first, to have access to the indexOf
-                    for(Ticket currTicket: toUseForTravel) {
-                        if(inventoryChangeListener != null) {
-                            inventoryChangeListener.onRemove(inventory.indexOf(currTicket));
-                            inventory.remove(currTicket);
+
+                    // This ability may only be activated, if the two turns can actually be made.
+                    // That means, after the 3 EXTRA_TURN-ability tickets are gone, there have to be enough tickets left in the inventory
+                    // for the player to do 2 moves. So not only are two tickets needed, but it has to be possible two use both to travel to neighbouring cities (and their neighbours)
+                    Vector<Ticket> simulationInventory = new Vector<>(inventory);
+                    // simulate the ability-tickets being put away
+                    for(int i = 0; i < toUseForTravel.size(); i++) {
+                        simulationInventory.remove(toUseForTravel.get(i));
+                    }
+
+                    Vector<Place> neighbours = gameState.getSurroundingPlaces(gameState.getMrX().getPlace());
+                    Player mrX = gameState.getMrX(); // just to write less
+
+                    boolean movePossible = false;
+
+                    for(int i = 0; i < neighbours.size(); i++) {
+                        Vehicle connection = gameState.getStreet(mrX.getPlace(), neighbours.get(i)); // can't be null (else it wouldn't be returned by getSurroundingPlaces)
+
+                        // Check inventory for ticket to get to the current neighbour
+                        for(int j = 0; j < simulationInventory.size(); j++) {
+                            if(simulationInventory.get(j).getVehicle() == connection) {
+                                // don't use this ticket again
+                                Ticket usedAlready = simulationInventory.get(j);
+
+                                // we have to make two moves, so check the neighbours of the current neighbour
+                                Vector<Place> neighborsNeighbors = gameState.getSurroundingPlaces(neighbours.get(i));
+                                for(int k = 0; k < neighborsNeighbors.size(); k++) {
+                                    // This connection starts at the first neighbor and ends at the second one
+                                    Vehicle connectionTwo = gameState.getStreet(neighbours.get(i), neighborsNeighbors.get(k));
+
+                                    // Check inventory for that connection now
+                                    for(int l = 0; l < simulationInventory.size(); l++) {
+
+                                        // Make sure we don't use the ticket we used for the first neighbour
+                                        if(simulationInventory.get(l).getVehicle() == connectionTwo && !simulationInventory.get(l).equals(usedAlready)) {
+                                            movePossible = true;
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
-                    gameState.activateAbility(0,toUseForTravel, Ability.SPECIAL);
+                    if(!movePossible) {
+                        changePhase(GAME_PHASE.MRX_EXTRA_TURN_NOT_POSSIBLE);
+                        break;
+                    }
 
-                    changePhase(GAME_PHASE.MRX_SPECIAL_CHOOSE_CITY);
+                    // Remove the tickets from the copy first, to have access to indexOf
+                    for(Ticket currTicket: toUseForTravel) {
+                        if(inventoryChangeListener != null) {
+                            inventoryChangeListener.onRemove(activeInventory.indexOf(currTicket));
+                        }
+                        activeInventory.remove(currTicket);
+                    }
+
+                    gameState.activateAbility(0, toUseForTravel, Ability.EXTRA_TURN);
+                    changePhase(GAME_PHASE.MRX_EXTRA_TURN_CHOOSE_TURN);
+
                     break;
                 }
-                case MRX_SPECIAL_CHOOSE_CITY: {
-                    if(selectedCity != null && gameState.getStreet(gameState.getMrX().getPlace(), selectedCity.getPlace()) != null) {
-                        changePhase(GAME_PHASE.MRX_SPECIAL_CONFIRM);
 
+                case MRX_EXTRA_TURN_CHOOSE_TURN: { // ----===== extra turn ability activate and tickets thrown. Wait for user to make his turn =====-----
+
+                    if(selectedCityRightNow != null) {
+                        Vehicle connection = gameState.getStreet(gameState.getMrX().getPlace(), selectedCityRightNow.getPlace());
+                        // There just has to be a directly connected city selected and exactly one ticket.
+                        // Also the ticket has to match the street connecting Mr. X's position to the selected city
+                        if(     connection != null &&
+                                selectedTicketsRightNow != null && selectedTicketsRightNow.size() == 1 &&
+                                selectedTicketsRightNow.get(0).getVehicle() == connection)
+                        {
+                            changePhase(GAME_PHASE.MRX_EXTRA_TURN_CONFIRM);
+                        }
                     }
                     break;
                 }
-                case MRX_SPECIAL_CONFIRM:
+
+                case MRX_EXTRA_TURN_CONFIRM: { // ----===== extra turn ability got confirmed and city and ticket selected. Wait for confirmation =====-----
+                    if(     selectedCityRightNow == null ||
+                            selectedTicketsRightNow == null || selectedTicketsRightNow.size() != 1 ||
+                            selectedTicketsRightNow.get(0).getVehicle() != gameState.getStreet(gameState.getMrX().getPlace(), selectedCityRightNow.getPlace()))
+                    {
+                        changePhase(GAME_PHASE.MRX_EXTRA_TURN_CHOOSE_TURN);
+                    }
+                    break;
+                }
+
+                case MRX_EXTRA_TURN_MOVE: { // ----===== extra turn ability got confirmed, city and ticket selected and the move confirmed =====-----
+                    // update timeline
+                    gameState.getTimeline().addRound(toUseForTravel.get(0), toTravelTo);
+                    if(timelineChangeListener != null) {
+                        timelineChangeListener.onTurnAdded(toUseForTravel.get(0), toTravelTo);
+                    }
+
+                    // remember ticket
+                    int ticketIndex = activeInventory.indexOf(toUseForTravel.get(0));
+
+                    // let the game move Mr. X
+                    gameState.doMove(0, toTravelTo, toUseForTravel.get(0));
+
+                    // Update inventory
+                    if(inventoryChangeListener != null) {
+                        inventoryChangeListener.onRemove(ticketIndex);
+                    }
+                    activeInventory.remove(ticketIndex);
+
+                    if(++extraTurnCounter >= 2) {
+                        changePhase(GAME_PHASE.MRX_WIN_CHECK);
+                        extraTurnCounter = 0;
+                    } else {
+                        changePhase(GAME_PHASE.MRX_EXTRA_TURN_CHOOSE_TURN);
+                    }
+                    break;
+                }
+
+                case MRX_EXTRA_TURN_NOT_POSSIBLE: {
+                    try {
+                        Thread.sleep(4000);
+                    } catch(InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
+                    break;
+                }
+
+                case MRX_SPECIAL: { // ----===== shadow ticket got confirmed, the tickets get used =====-----
+
+                    for(Ticket currTicket: toUseForTravel) {
+                        int ticketIndex = activeInventory.indexOf(currTicket);
+                        if(inventoryChangeListener != null) {
+                            inventoryChangeListener.onRemove(ticketIndex);
+                        }
+                        activeInventory.remove(ticketIndex);
+                    }
+
+                    gameState.activateAbility(0, toUseForTravel, Ability.SPECIAL);
+
+                    changePhase(GAME_PHASE.MRX_SPECIAL_CHOOSE_CITY);
+
+                    break;
+                }
+                case MRX_SPECIAL_CHOOSE_CITY: { // ----===== Waiting for the user to select a City to be travelled to anonymously =====-----
+                    if(selectedCityRightNow != null && gameState.getStreet(gameState.getMrX().getPlace() , selectedCity.getPlace()) != null) {
+                        changePhase(GAME_PHASE.MRX_SPECIAL_CONFIRM);
+                    }
+                    break;
+                }
+                case MRX_SPECIAL_CONFIRM: { // ----===== Waiting for the player to confirm the selected city (unselecting City -> ask user for city again) =====-----
                     // if city gets deselected or other (non-reachable) city gets selected, go back
-                    if(selectedCity == null || gameState.getStreet(gameState.getMrX().getPlace(), selectedCity.getPlace()) == null) {
+                    if (selectedCityRightNow == null || gameState.getStreet(gameState.getMrX().getPlace(), selectedCityRightNow.getPlace()) == null) {
                         changePhase(GAME_PHASE.MRX_SPECIAL_CHOOSE_CITY);
                     }
                     break;
-                case MRX_SPECIAL_MOVE: {
+                }
+                case MRX_SPECIAL_MOVE: { // ----===== Shadow Ticket move got confirmed. Move, put ticket in timeline =====-----
                     Ticket ticketOfShadows = new Ticket(Vehicle.SHADOW, Ability.SHADOW);
                     gameState.doFreeMove(0, toTravelTo);
                     gameState.getTimeline().addRound(ticketOfShadows, toTravelTo);
                     if(timelineChangeListener != null) {
                         timelineChangeListener.onTurnAdded(ticketOfShadows, toTravelTo);
                     }
-                    changePhase(GAME_PHASE.MRX_CHOOSE_TURN); // TODO: WIN-CONDITION CHECK
+                    changePhase(GAME_PHASE.MRX_WIN_CHECK);
                     break;
                 }
+
+                case MRX_WIN_CHECK: {
+                    if(gameState.isGameLost()) {
+                        System.out.println("Mr. X won! Yay");
+                    } else {
+                        System.out.println("Mr. X didn't win =(");
+                    }
+                    changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
+                    break;
+                }
+
                 default:
-                    System.out.println("Nuttin");
                     break;
             }
         }
@@ -447,18 +593,19 @@ public class GameView extends SurfaceView {
                 }
                 break;
             }
+            case MRX_EXTRA_TURN_CONFIRM: // The conditions were checked before, just set the selectedCity and Ticket to use
             case MRX_SPECIAL_CONFIRM: {
-                // if city was deselected in the meantime
-                if(selectedCity == null) {
-                    return;
-                }
-
                 toTravelTo = selectedCity.getPlace(); // Not checking if the street is connected here again brings a tiny risk for a bug/exploit.
-                                                        // Let's see, if someone uses it in a speedrun. It'd be a frame perfect trick.
+
                 selectedCity.deselect();
                 selectedCity = null;
 
-                changePhase(GAME_PHASE.MRX_SPECIAL_MOVE);
+                if(currPhase == GAME_PHASE.MRX_SPECIAL_CONFIRM) {
+                    changePhase(GAME_PHASE.MRX_SPECIAL_MOVE);
+
+                } else if(currPhase == GAME_PHASE.MRX_EXTRA_TURN_CONFIRM) {
+                    changePhase(GAME_PHASE.MRX_EXTRA_TURN_MOVE);
+                }
                 break;
             }
         }
@@ -760,6 +907,7 @@ public class GameView extends SurfaceView {
                     case MRX_CONFIRM_ABILITY:
                     case MRX_CONFIRM_MOVE:
                     case MRX_SPECIAL_CONFIRM:
+                    case MRX_EXTRA_TURN_CONFIRM:
                         helpText = "Confirm selection to make your move";
                         break;
                     case MRX_MOVE:
@@ -775,6 +923,15 @@ public class GameView extends SurfaceView {
 
                     case MRX_SPECIAL_MOVE:
                         helpText = "psst";
+                        break;
+                    case MRX_EXTRA_TURN_CHOOSE_TURN:
+                        helpText = "Choose your destiny and ticket (twice)";
+                        break;
+                    case MRX_EXTRA_TURN_MOVE:
+                        helpText = "moving twice";
+                        break;
+                    case MRX_EXTRA_TURN_NOT_POSSIBLE:
+                        helpText = "Can't do that, not enough tickets to actaully move twice";
                         break;
                     default:
                         helpText = "";

@@ -53,7 +53,7 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
     private List<Ticket> inventory;
     private SelectionTracker<Long> tracker = null;
 
-    public InventoryAdapter(List<Ticket> inventory) {
+    public InventoryAdapter(List<Ticket> inventory, final RecyclerView parent) {
         this.inventory = inventory;
         setHasStableIds(true);
     }
@@ -110,16 +110,21 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
 
     @Override
     public long getItemId(final int position) {
-        return inventory.get(position).hashCode();
+        //return inventory.get(position).hashCode();
+        return position;
     }
 
     public Ticket getTicketById(final long id) {
-        for(Ticket currTicket: inventory) {
-            if(currTicket.hashCode() == (int)id) {
+        /*for(Ticket currTicket: inventory) {
+            if((long)currTicket.hashCode() == id) {
                 return currTicket;
             }
         }
         return null;
+
+         */
+
+        return inventory.get((int)id);
     }
 
     public void setTracker(final SelectionTracker<Long> tracker) {

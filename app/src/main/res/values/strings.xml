@@ -4,5 +4,6 @@
     <string name="inventory_layout_vehicle_description">The ticket\'s vehicle</string>
     <string name="inventory_layout_ability_description">The ticket\'s ability</string>
     <string name="timeline_move_count">Move </string>
+    <string name="timeline_move_start">Start</string>
 
 </resources>
