@@ -22,7 +22,7 @@ class InventoryItemKeyProvider<K> extends ItemKeyProvider<Long> {
         if(adapter != null) {
             return adapter.getItemId(position);
         }
-        throw new NullPointerException("Adapter of RecyclerView is null");
+        return null;
     }
 
     @Override
@@ -31,6 +31,6 @@ class InventoryItemKeyProvider<K> extends ItemKeyProvider<Long> {
         if(holder != null) {
             return holder.getLayoutPosition();
         }
-        throw new NullPointerException("ViewHolder with key " + key + " could not be found.");
+        return -1; // This is ok... Happens regularly
     }
 }

@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import com.craws.mrx.engine.GameView;
 import com.craws.mrx.engine.InventoryChangeListener;
@@ -31,6 +32,8 @@ public class GameActivity extends AppCompatActivity {
     private TimelineAdapter adapterTL;
     private RelativeLayout relativeLayoutInventory;
 
+    private TextView txtInstructions;
+
     // The displayed inventory in the RecyclerView. Will have to be built every time player's change.
     private Vector<Ticket> activeInventory;
     private Timeline timeline;
@@ -41,6 +44,8 @@ public class GameActivity extends AppCompatActivity {
         setContentView(R.layout.activity_game);
 
         gameView = findViewById(R.id.gameView);
+
+        txtInstructions = findViewById(R.id.textView_instruction);
 
         // Graphical part of the inventory
         recInventory = findViewById(R.id.recycViewInventory);
@@ -113,13 +118,15 @@ public class GameActivity extends AppCompatActivity {
             } else {
                 showMenus();
             }
+
+            setUserInstruction(phase);
         });
 
         // To update the Inventory-RecyclerView
         gameView.setInventoryChangeListener(new InventoryChangeListener() {
             @Override
-            public void onAdd(Ticket added) {
-                activeInventoryAdd(new Ticket(added.getVehicle(), added.getAbility()));
+            public void onAdd(final Ticket added) {
+                activeInventoryAdd(added);
             }
 
             @Override
@@ -169,9 +176,8 @@ public class GameActivity extends AppCompatActivity {
     private void activeInventoryAdd(final Ticket toAdd) {
         // RecyclerView may only be changed by the Thread that created it
         runOnUiThread(() -> {
-            int nextIndex = activeInventory.size();
             activeInventory.add(toAdd);
-            adapterInv.notifyItemInserted(nextIndex);
+            adapterInv.notifyItemInserted(activeInventory.indexOf(toAdd));
         });
     }
 
@@ -213,6 +219,53 @@ public class GameActivity extends AppCompatActivity {
             timeline.addRound(ticket, place);
             adapterTL.notifyItemInserted(nextIndex);
         });
+    }
+
+    public void setUserInstruction(final GameView.GAME_PHASE phase) {
+        switch (phase) {
+            case MRX_CHOOSE_TURN:
+                txtInstructions.setText(R.string.user_instructions_mrx_choose_turn);
+                break;
+            case MRX_CHOOSE_TICKET:
+                txtInstructions.setText(R.string.user_instructions_mrx_choose_ticket);
+                break;
+            case MRX_CHOOSE_ABILITY_TICKETS:
+                txtInstructions.setText(R.string.user_instructions_mrx_choose_ability_tickets);
+                break;
+            case MRX_ABILITY_CONFIRM:
+                txtInstructions.setText(R.string.user_instructions_mrx_confirm_ability);
+                break;
+            case MRX_MOVE_CONFIRM:
+            case MRX_SPECIAL_CONFIRM:
+            case MRX_EXTRA_TURN_CONFIRM:
+                txtInstructions.setText(R.string.user_instructions_mrx_confirm_move);
+                break;
+            case MRX_MOVE:
+            case MRX_SPECIAL_MOVE:
+            case MRX_EXTRA_TURN_MOVE:
+                txtInstructions.setText(R.string.user_instructions_mrx_move);
+                break;
+            case MRX_SPECIAL_CHOOSE_CITY:
+                txtInstructions.setText(R.string.user_instructions_mrx_special_choose_city);
+                break;
+            case MRX_EXTRA_TURN_CHOOSE_TURN:
+                txtInstructions.setText(R.string.user_instructions_mrx_extra_turn_choose_turn);
+                break;
+            case MRX_EXTRA_TURN_NOT_POSSIBLE:
+                txtInstructions.setText(R.string.user_instructions_mrx_extra_turn_not_possible);
+                break;
+            case MRX_EXTRA_TURN_ONE_NOT_POSSIBLE:
+                txtInstructions.setText(R.string.user_instructions_mrx_extra_turn_one_not_possible);
+                break;
+            case MRX_THROW_TICKETS:
+                txtInstructions.setText(R.string.user_instructions_mrx_throw_tickets);
+                break;
+            case MRX_SPECIAL: // Just throw the needed tickets, user won't see this
+            case MRX_EXTRA_TURN:
+            case MRX_THROWING_SELECTED_TICKETS:
+            default:
+                //txtInstructions.setText("");
+        }
     }
 
     @Override
