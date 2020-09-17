@@ -17,5 +17,6 @@
     <string name="user_instructions_mrx_extra_turn_not_possible">Can\'t do that, not enough tickets to actually move twice</string>
     <string name="user_instructions_mrx_throw_tickets">"Choose tickets to throw away, if any"</string>
     <string name="user_instructions_mrx_extra_turn_one_not_possible">Can\'t go there, no tickets to move from there</string>
+    <string name="user_instructions_mrx_no_valid_move">No ticket to make a move from here. Skipping turn</string>
 
 </resources>

@@ -8,6 +8,7 @@ import com.craws.mrx.state.Player;
 
 public class Figure extends Render {
     private final Player player;
+    private boolean marked;
 
     // For travelling between cities (and especially ease-in and out of movement)
     private static final float maxSpeed = 70;
@@ -21,16 +22,16 @@ public class Figure extends Render {
         resize((int) (getWidth() * GameView.FIGURE_SCALE_FACTOR), (int) (getHeight() * GameView.FIGURE_SCALE_FACTOR));
         snapToCurrentCity();
 
-        currFrame = player.getPort();
+        currFrame = player.getPort() * 2;
     }
 
     public Figure(final Context context, final Player player, final int width, final int height) {
-        super(BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.player_sprites), 1, 6, 0f, 0f, width, height);
+        super(BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.player_sprites), 2, 6, 0f, 0f, width, height);
         this.player = player;
 
         snapToCurrentCity();
 
-        currFrame = player.getPort();
+        currFrame = player.getPort() * 2;
     }
 
     @Override
@@ -108,7 +109,23 @@ public class Figure extends Render {
         }
     }
 
+    public void select() {
+        currFrame = getPlayer().getPort() * 2 + 1;
+    }
+
+    public void deselect() {
+        currFrame = getPlayer().getPort() * 2;
+    }
+
     public Player getPlayer() {
         return player;
+    }
+
+    public boolean isMarked() {
+        return marked;
+    }
+
+    public void setMarked(boolean marked) {
+        this.marked = marked;
     }
 }

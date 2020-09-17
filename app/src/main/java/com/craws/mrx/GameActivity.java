@@ -1,5 +1,6 @@
 package com.craws.mrx;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.selection.SelectionPredicates;
 import androidx.recyclerview.selection.SelectionTracker;
@@ -16,6 +17,7 @@ import android.widget.TextView;
 
 import com.craws.mrx.engine.GameView;
 import com.craws.mrx.engine.InventoryChangeListener;
+import com.craws.mrx.engine.TimelineChangeListener;
 import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Ticket;
 import com.craws.mrx.state.Timeline;
@@ -26,11 +28,14 @@ public class GameActivity extends AppCompatActivity {
     private Thread gameLoopThread;
 
     private GameView gameView;
+
+    private RelativeLayout relativeLayoutInventory;
     private RecyclerView recInventory;
     private InventoryAdapter adapterInv;
+
     private RecyclerView recTimeline;
     private TimelineAdapter adapterTL;
-    private RelativeLayout relativeLayoutInventory;
+    private int currColorIndex;
 
     private TextView txtInstructions;
 
@@ -107,6 +112,8 @@ public class GameActivity extends AppCompatActivity {
 
         adapterTL = new TimelineAdapter(timeline);
 
+        currColorIndex = 0;
+
         recTimeline.setAdapter(adapterTL);
         recTimeline.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
 
@@ -140,7 +147,17 @@ public class GameActivity extends AppCompatActivity {
             }
         });
 
-        gameView.setTimelineChangeListener(this::timelineAdd);
+        gameView.setTimelineChangeListener(new TimelineChangeListener() {
+            @Override
+            public void onTurnAdded(@Nullable Ticket ticket, Place destination) {
+                timelineAdd(ticket, destination);
+            }
+
+            @Override
+            public void onTurnMarked(int round) {
+                markTurn(round);
+            }
+        });
 
 
         // Create new Thread so we can leave onCreate (and access the Views) while starting the game.
@@ -221,6 +238,18 @@ public class GameActivity extends AppCompatActivity {
         });
     }
 
+    private void markTurn(final int round) {
+        TimelineAdapter.ViewHolder viewHolder = (TimelineAdapter.ViewHolder)recTimeline.findViewHolderForLayoutPosition(round);
+        if(viewHolder != null) {
+            viewHolder.setBackgroundColor(GameView.markColorCoding[currColorIndex++]);
+            if(currColorIndex >= GameView.markColorCoding.length) {
+                currColorIndex = 0;
+            }
+        } else {
+            System.out.println("NOoooOOOOOOoooooOooOOoooOoOo");
+        }
+    }
+
     public void setUserInstruction(final GameView.GAME_PHASE phase) {
         switch (phase) {
             case MRX_CHOOSE_TURN:
@@ -260,11 +289,13 @@ public class GameActivity extends AppCompatActivity {
             case MRX_THROW_TICKETS:
                 txtInstructions.setText(R.string.user_instructions_mrx_throw_tickets);
                 break;
-            case MRX_SPECIAL: // Just throw the needed tickets, user won't see this
+            case MRX_NO_VALID_MOVE:
+                txtInstructions.setText(R.string.user_instructions_mrx_no_valid_move);
+                break;
+            case MRX_SPECIAL: // Just throw the needed tickets, user won't see this. leave the previous message
             case MRX_EXTRA_TURN:
             case MRX_THROWING_SELECTED_TICKETS:
             default:
-                //txtInstructions.setText("");
         }
     }
 

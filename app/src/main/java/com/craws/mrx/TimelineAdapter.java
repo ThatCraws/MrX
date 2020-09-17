@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -25,6 +26,10 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
 
             txt_itemCount = itemView.findViewById(R.id.text_itemCount);
             img_Vehicle = itemView.findViewById(R.id.TL_image_vehicle);
+        }
+
+        public void setBackgroundColor(final @ColorInt int color) {
+            itemView.setBackgroundColor(color);
         }
 
     }

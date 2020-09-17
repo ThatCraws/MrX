@@ -9,7 +9,7 @@ import java.util.Vector;
 
 public class GameState {
     /* ------ The Detectives and Mr. X ------ */
-    private Vector<Player> players;
+    private Vector<Player> detectives;
     private int port;
 
     private Player mrX;
@@ -46,7 +46,7 @@ public class GameState {
     }
 
     private void setup() {
-        players = new Vector<>();
+        detectives = new Vector<>();
         streets = new Vector<>();
 
         bagOfTickets = new Vector<>();
@@ -177,7 +177,7 @@ public class GameState {
     }
 
     private int addDetective(Player toAdd) {
-        players.add(toAdd);
+        detectives.add(toAdd);
         return port++;
     }
 
@@ -359,7 +359,7 @@ public class GameState {
      */
     public boolean isGameWon() {
         // check if the player is standing on the same field/place as Mr. X
-        for(Player currPlayer: players) {
+        for(Player currPlayer: detectives) {
             if (mrX.getPlace().equals(currPlayer.getPlace())) {
                 return true;
             }
@@ -370,7 +370,7 @@ public class GameState {
         boolean escapeAvailable = false;
         for (int i = 0; i < escapeRoutes.size() && (!escapeAvailable); i++) {
             boolean placeOccupied = false;
-            for(Player currPlayer: players) {
+            for(Player currPlayer: detectives) {
                 if ((map.getNodeData(escapeRoutes.get(i)).equals(currPlayer.getPlace()))) {
                     placeOccupied = true;
                     break;
@@ -429,7 +429,7 @@ public class GameState {
      *
      */
     public boolean isPlaceOccupied(final Place toCheck) {
-        for(Player currPlayer: players) {
+        for(Player currPlayer: detectives) {
             if(currPlayer.getPlace().equals(toCheck)) {
                 return true;
             }
@@ -451,7 +451,7 @@ public class GameState {
         if(port == 0) {
             return mrX;
         }
-        for(Player currPlayer: players) {
+        for(Player currPlayer: detectives) {
             if(currPlayer.getPort() == port) {
                 return currPlayer;
             }
@@ -462,8 +462,8 @@ public class GameState {
 
     // ----------- GETTERS -----------
 
-    public Vector<Player> getPlayers() {
-        return players;
+    public Vector<Player> getDetectives() {
+        return detectives;
     }
 
     public int getHighestPort() {

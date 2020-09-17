@@ -14,40 +14,40 @@ import java.util.Vector;
  * [x]      | x-th Ticket used  | Position after x-th Ticket used
  */
 public class Timeline {
-    private Vector<Ticket> tickets;
-    private Vector<Place> places;
+    private Vector<Item> timeline;
 
     /** Constructor for creating a new empty Timeline
      */
     public Timeline() {
-        tickets = new Vector<>();
-        places = new Vector<>();
+        timeline = new Vector<>();
     }
 
     /** Constructor for creating a new Timeline with the given start position of Mr. X already inserted.
      * @param startPosition The position/Place Mr. X started on.
      */
     public Timeline(final Place startPosition) {
-        tickets = new Vector<>();
-        places = new Vector<>();
+        timeline = new Vector<>();
 
         addRound(null, startPosition);
     }
 
     public int size() {
-        if(tickets.size() == places.size()) {
-            return tickets.size();
-        } else {
-            return -1;
-        }
+        return timeline.size();
     }
 
     public boolean isEmpty() {
-        return tickets.isEmpty() && places.isEmpty();
+        return timeline.isEmpty();
     }
 
     public boolean containsPair(@Nullable Ticket key, @NonNull Place value) {
-        return tickets.contains(key) && places.contains(value);
+        for(int i = 0; i < timeline.size(); i++) {
+            Item currItem = timeline.get(i);
+            if(currItem.getTicket() == key && currItem.getPlace() == value) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** Adds a Ticket and the Place it was used to visit to the timeline
@@ -56,8 +56,7 @@ public class Timeline {
      * @param value The Place that was travelled to via the Ticket
      */
     public void addRound(@Nullable Ticket key, @NonNull Place value) {
-        tickets.add(key);
-        places.add(value);
+        timeline.add(new Item(key, value));
     }
 
     /** Returns the Ticket used in the given round
@@ -67,10 +66,10 @@ public class Timeline {
      * @return The Ticket that was used in the round given
      */
     public @Nullable Ticket getTicketForRound(final int round) {
-        if(round > places.size()) {
+        if(round > timeline.size()) {
             throw new IndexOutOfBoundsException("Asked timeline for a (ticket from a) round that has not been played yet.");
         }
-        return tickets.get(round);
+        return timeline.get(round).getTicket();
     }
 
     /** Returns the Place Mr. X ended on in the given round
@@ -80,11 +79,46 @@ public class Timeline {
      * @return The Ticket that was used in the round given
      */
     public @NonNull Place getPlaceForRound(final int round) {
-        if(round > places.size()) {
+        if(round > timeline.size()) {
             throw new IndexOutOfBoundsException("Asked timeline for a (place from a) round that has not been played yet.");
         }
-        return places.get(round);
+        return timeline.get(round).getPlace();
     }
 
+    public void mark(final int round) {
+        if(round < timeline.size()) {
+            timeline.get(round).mark();
+        } else {
+            throw new IndexOutOfBoundsException("Tried to mark round that has not happened yet.");
+        }
+    }
+
+    private class Item {
+        private Ticket ticket;
+        private Place place;
+        private boolean marked;
+
+        public Item(final Ticket ticket, final Place place) {
+            this.ticket = ticket;
+            this.place = place;
+            this.marked = false;
+        }
+
+        public void mark() {
+            marked = true;
+        }
+
+        public Ticket getTicket() {
+            return ticket;
+        }
+
+        public Place getPlace() {
+            return place;
+        }
+
+        public boolean isMarked() {
+            return marked;
+        }
+    }
 
 }
