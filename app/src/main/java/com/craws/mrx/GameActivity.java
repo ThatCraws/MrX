@@ -37,6 +37,8 @@ public class GameActivity extends AppCompatActivity {
     private TimelineAdapter adapterTL;
     private int currColorIndex;
 
+    private boolean menusHidden;
+
     private TextView txtInstructions;
 
     // The displayed inventory in the RecyclerView. Will have to be built every time player's change.
@@ -117,13 +119,21 @@ public class GameActivity extends AppCompatActivity {
         recTimeline.setAdapter(adapterTL);
         recTimeline.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
 
+        menusHidden = false;
+
 
         // To manage the game, we listen for phase changes
         gameView.setOnPhaseChangeListener((phase) -> {
             if (phase == GameView.GAME_PHASE.INTERRUPTED) {
-                hideMenus();
+                if(!menusHidden) {
+                    hideMenus();
+                    menusHidden = true;
+                }
             } else {
-                showMenus();
+                if(menusHidden) {
+                    showMenus();
+                    menusHidden = false;
+                }
             }
 
             setUserInstruction(phase);
@@ -211,7 +221,6 @@ public class GameActivity extends AppCompatActivity {
             } else {
                 adapterInv.notifyItemRemoved(position);
             }
-
         });
     }
 
@@ -239,64 +248,123 @@ public class GameActivity extends AppCompatActivity {
     }
 
     private void markTurn(final int round) {
-        TimelineAdapter.ViewHolder viewHolder = (TimelineAdapter.ViewHolder)recTimeline.findViewHolderForLayoutPosition(round);
-        if(viewHolder != null) {
-            viewHolder.setBackgroundColor(GameView.markColorCoding[currColorIndex++]);
-            if(currColorIndex >= GameView.markColorCoding.length) {
-                currColorIndex = 0;
+        runOnUiThread(() -> {
+            TimelineAdapter.ViewHolder viewHolder = (TimelineAdapter.ViewHolder) recTimeline.findViewHolderForLayoutPosition(round);
+            if (viewHolder != null) {
+                viewHolder.setBackgroundColor(GameView.markColorCoding[currColorIndex++]);
+                if (currColorIndex >= GameView.markColorCoding.length) {
+                    currColorIndex = 0;
+                }
+            } else {
+                System.out.println("NOoooOOOOOOoooooOooOOoooOoOo");
             }
-        } else {
-            System.out.println("NOoooOOOOOOoooooOooOOoooOoOo");
-        }
+        });
     }
 
     public void setUserInstruction(final GameView.GAME_PHASE phase) {
+        String helpText = "";
         switch (phase) {
             case MRX_CHOOSE_TURN:
-                txtInstructions.setText(R.string.user_instructions_mrx_choose_turn);
+                helpText = "Click city to move to or the ticket with the ability to activate";
                 break;
             case MRX_CHOOSE_TICKET:
-                txtInstructions.setText(R.string.user_instructions_mrx_choose_ticket);
+                helpText = "Choose the ticket to use for travel";
                 break;
             case MRX_CHOOSE_ABILITY_TICKETS:
-                txtInstructions.setText(R.string.user_instructions_mrx_choose_ability_tickets);
+                helpText = "Choose the (3) tickets to activate ability with";
                 break;
             case MRX_ABILITY_CONFIRM:
-                txtInstructions.setText(R.string.user_instructions_mrx_confirm_ability);
+            case DET_ABILITY_CONFIRM:
+                helpText = "Confirm to use tickets and activate ability";
                 break;
             case MRX_MOVE_CONFIRM:
             case MRX_SPECIAL_CONFIRM:
             case MRX_EXTRA_TURN_CONFIRM:
-                txtInstructions.setText(R.string.user_instructions_mrx_confirm_move);
+            case DET_MOVE_CONFIRM:
+            case DET_EXTRA_TURN_CONFIRM:
+                helpText = "Confirm selection to make your move";
                 break;
             case MRX_MOVE:
             case MRX_SPECIAL_MOVE:
             case MRX_EXTRA_TURN_MOVE:
-                txtInstructions.setText(R.string.user_instructions_mrx_move);
+            case DET_MOVE:
+            case DET_EXTRA_TURN_MOVE:
+                helpText = "I'm walkin' hee'";
                 break;
             case MRX_SPECIAL_CHOOSE_CITY:
-                txtInstructions.setText(R.string.user_instructions_mrx_special_choose_city);
+                helpText = "Choose city to sneak to";
                 break;
             case MRX_EXTRA_TURN_CHOOSE_TURN:
-                txtInstructions.setText(R.string.user_instructions_mrx_extra_turn_choose_turn);
+                helpText = "Choose your destination and ticket (twice)";
                 break;
             case MRX_EXTRA_TURN_NOT_POSSIBLE:
-                txtInstructions.setText(R.string.user_instructions_mrx_extra_turn_not_possible);
+                helpText = "Can't do that, not enough tickets to actually move twice";
                 break;
             case MRX_EXTRA_TURN_ONE_NOT_POSSIBLE:
-                txtInstructions.setText(R.string.user_instructions_mrx_extra_turn_one_not_possible);
+                helpText = "Can't go there, no tickets to move from there";
+                break;
+            case MRX_NO_VALID_MOVE_CHOOSE_TURN:
+                helpText = "Click confirm to end turn or choose ability tickets";
+                break;
+            case MRX_NO_VALID_MOVE_CHOOSE_SPECIAL_TICKETS:
+                helpText = "Select 3 of the ''shadow ticket''-ability tickets";
+                break;
+            case MRX_NO_VALID_MOVE_SPECIAL_ACTIVATION_CONFIRM:
+                helpText = "Click confirm to activate shadow ticket";
                 break;
             case MRX_THROW_TICKETS:
-                txtInstructions.setText(R.string.user_instructions_mrx_throw_tickets);
+            case DET_THROW_TICKETS:
+                helpText = "Choose tickets to throw away, if any";
                 break;
             case MRX_NO_VALID_MOVE:
-                txtInstructions.setText(R.string.user_instructions_mrx_no_valid_move);
+            case DET_NO_VALID_MOVE:
+                helpText = "No ticket to make a move from here. Skipping turn";
                 break;
+            case DET_CHOOSE_MOVE:
+                helpText = "Select city and ticket for move with current detective";
+                break;
+            case DET_SELECT_NEXT:
+                helpText = "Click Confirm to end turn or select ability tickets";
+                break;
+            case DET_CHOOSE_ABILITY_TICKETS:
+                helpText = "Choose between 3-5 tickets of the same ability";
+                break;
+
+            case DET_EXTRA_TURN:
+                helpText = "Placeholder DET_EXTRA_TURN";
+                break;
+            case DET_EXTRA_TURN_CHOOSE_TURN:
+                helpText = "Placeholder DET_EXTRA_TURN_CHOOSE_TURN";
+                break;
+            case DET_EXTRA_TURN_WIN_CHECK:
+                helpText = "Placeholder DET_EXTRA_TURN_WIN_CHECK";
+                break;
+            case DET_EXTRA_TURN_NOT_POSSIBLE:
+                helpText = "Placeholder DET_EXTRA_TURN_NOT_POSSIBLE";
+                break;
+            case DET_SPECIAL:
+                helpText = "Placeholder DET_SPECIAL";
+                break;
+            case DET_SPECIAL_DO:
+                helpText = "Placeholder DET_SPECIAL_DO";
+                break;
+            case DET_THROWING_SELECTED_TICKETS:
+                helpText = "Placeholder DET_THROWING_SELECTED_TICKETS";
+                break;
+            case DET_WIN_CHECK:
+                helpText = "Placeholder DET_WIN_CHECK";
+                break;
+            case DET_WON:
+                helpText = "Placeholder DET_WON";
+                break;
+
             case MRX_SPECIAL: // Just throw the needed tickets, user won't see this. leave the previous message
             case MRX_EXTRA_TURN:
             case MRX_THROWING_SELECTED_TICKETS:
             default:
         }
+        final String toSet = helpText;
+        runOnUiThread(() -> txtInstructions.setText(toSet));
     }
 
     @Override

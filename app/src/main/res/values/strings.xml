@@ -4,19 +4,5 @@
     <string name="inventory_layout_vehicle_description">The ticket\'s vehicle</string>
     <string name="inventory_layout_ability_description">The ticket\'s ability</string>
     <string name="timeline_move_count">Move </string>
-    <string name="timeline_move_start">Start</string>
-
-    <string name="user_instructions_mrx_choose_turn">Click city to move to or the ticket with the ability to activate</string>
-    <string name="user_instructions_mrx_choose_ticket">Choose the ticket to use for travel</string>
-    <string name="user_instructions_mrx_choose_ability_tickets">Choose the (3) tickets to activate ability with</string>
-    <string name="user_instructions_mrx_confirm_ability">Confirm to use tickets and activate ability</string>
-    <string name="user_instructions_mrx_confirm_move">Confirm selection to make your move</string>
-    <string name="user_instructions_mrx_move">I\'m walkin\' hee\'.</string>
-    <string name="user_instructions_mrx_special_choose_city">Choose city to sneak to</string>
-    <string name="user_instructions_mrx_extra_turn_choose_turn">Choose your destination and ticket (twice)</string>
-    <string name="user_instructions_mrx_extra_turn_not_possible">Can\'t do that, not enough tickets to actually move twice</string>
-    <string name="user_instructions_mrx_throw_tickets">"Choose tickets to throw away, if any"</string>
-    <string name="user_instructions_mrx_extra_turn_one_not_possible">Can\'t go there, no tickets to move from there</string>
-    <string name="user_instructions_mrx_no_valid_move">No ticket to make a move from here. Skipping turn</string>
-
+    <string name="timeline_move_start">Start</string>`
 </resources>

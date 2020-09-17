@@ -47,6 +47,9 @@ public class GameView extends SurfaceView {
 
         // ----------------- MR. X -----------------
         MRX_NO_VALID_MOVE,
+        MRX_NO_VALID_MOVE_CHOOSE_TURN,
+        MRX_NO_VALID_MOVE_CHOOSE_SPECIAL_TICKETS,
+        MRX_NO_VALID_MOVE_SPECIAL_ACTIVATION_CONFIRM,
 
         MRX_CHOOSE_TURN,                    // Move (clicking city) or ability (clicking ticket before city)
         MRX_CHOOSE_ABILITY_TICKETS,         // after first Ticket is selected, selected the other two (with same ability, else abort and back to MRX_CHOOSE_TURN
@@ -57,7 +60,7 @@ public class GameView extends SurfaceView {
         MRX_EXTRA_TURN_MOVE,
         MRX_EXTRA_TURN_NOT_POSSIBLE,
         MRX_EXTRA_TURN_ONE_NOT_POSSIBLE,    // This means the ability was successfully activated, but the user tried to move to a place with his first turn, from where he
-                                            // couldn't do his second move (because he is going to a place that only has streets which require tickets not in his inventory)
+        // couldn't do his second move (because he is going to a place that only has streets which require tickets not in his inventory)
 
         MRX_SPECIAL,                        // The usage of the ability has been confirmed. Prepare.
         MRX_SPECIAL_CHOOSE_CITY,
@@ -83,17 +86,20 @@ public class GameView extends SurfaceView {
 
         DET_CHOOSE_ABILITY_TICKETS,         // Choose 3-5 tickets, so "finish"-button or something will be needed
         DET_ABILITY_CONFIRM,
-        DET_ABILITY,                        // Throw away tickets
+                                            // Throw away tickets for SPECIAL
 
-        DET_EXTRA_TURN,                     // Choose detective and City and travel there free of cost
+        DET_EXTRA_TURN,                     // Check if the free ticket gotten via the extra turn can even be used (is any detective on a place with a street that needs that kind of ticket?)
+        DET_EXTRA_TURN_CHOOSE_TURN,         // Choose detective and City and travel there free of cost
         DET_EXTRA_TURN_CONFIRM,
         DET_EXTRA_TURN_MOVE,
+        DET_EXTRA_TURN_NOT_POSSIBLE,
         DET_EXTRA_TURN_WIN_CHECK,
 
-        DET_SPECIAL,                        // Retrieve Location From Timeline (and set the city-sprite accordingly).
+        DET_SPECIAL,                        // Throw away tickets for ability/prepare ability.
+        DET_SPECIAL_DO,                     // Retrieve Location From Timeline (and set the city-sprite accordingly).
 
         DET_WIN_CHECK,                      // lame
-        DET_THROW_TICKETS,                   // Even the detective-player is allowed to throw as many tickets as they want and restock (to 4 + No. of controlled detectives)
+        DET_THROW_TICKETS,                  // Even the detective-player is allowed to throw as many tickets as they want and restock (to 4 + No. of controlled detectives)
         DET_THROWING_SELECTED_TICKETS,
 
         MRX_WON,
@@ -111,6 +117,7 @@ public class GameView extends SurfaceView {
     private TimelineChangeListener timelineChangeListener;
     // keep track of selection
     private City selectedCity;
+    private Vector<City> markedCities;
     private Figure selectedFigure;
     private Vector<Ticket> selectedTickets;
     // to preserve the above values which might otherwise get re-polled between testing values for validity and actually using them for actions
@@ -128,13 +135,14 @@ public class GameView extends SurfaceView {
     private Paint paint;
     // These colors will be used to mark the cities (when the detectives' special ability to mark Mr. X's position a few rounds ago is activated) //
     // and the the associated position in the timeline.
-    public static final @ColorInt int[] markColorCoding = {
+    public static final @ColorInt
+    int[] markColorCoding = {
             Color.BLUE,
             Color.CYAN,
             Color.MAGENTA,
-            Color.argb(255, 64,160,64),     // Own green to not be confused with the FAST-street
-            Color.argb(255, 224, 192,32),   // Own yellow to not be confused with the MEDIUM-street
-            Color.argb(255,192,64,64),      // Own red to not be confused with the SLOW-street
+            Color.argb(255, 64, 160, 64),     // Own green to not be confused with the FAST-street
+            Color.argb(255, 224, 192, 32),   // Own yellow to not be confused with the MEDIUM-street
+            Color.argb(255, 192, 64, 64),      // Own red to not be confused with the SLOW-street
             Color.WHITE,
             Color.BLACK};
 
@@ -178,7 +186,7 @@ public class GameView extends SurfaceView {
         }
 
     }
-/*  ---=============================================================================---  */
+    /*  ---=============================================================================---  */
 
 
     public GameView(Context context) {
@@ -211,6 +219,7 @@ public class GameView extends SurfaceView {
         gameState = new GameState(context);
         selectedTickets = new Vector<>();
         selectedCity = null;
+        markedCities = new Vector<>();
         selectedFigure = null;
         // helpers (like selectedTickets(RightNow) and selectedCity(RightNow), but not overwritten every game loop iteration)
         toTravel = null;
@@ -230,7 +239,7 @@ public class GameView extends SurfaceView {
         surfaceHolder.addCallback(new GameViewListener());
 
         //update viewport
-        dstViewport.set(0f, 0f, (float)getWidth(), (float)getHeight());
+        dstViewport.set(0f, 0f, (float) getWidth(), (float) getHeight());
 
         Place pl_kiel = gameState.buildPlace("Kiel", false, 450, 125);
         Place pl_bremen = gameState.buildPlace("Bremen", false, 100, 200);
@@ -239,6 +248,8 @@ public class GameView extends SurfaceView {
         Place pl_murica = gameState.buildPlace("Murica", true, 500, 600);
         Place pl_kaffstadt = gameState.buildPlace("Kaffster", false, 600, 475);
         Place pl_berlin = gameState.buildPlace("Berlin", false, 550, 300);
+
+        Place pl_forgotten_island = gameState.buildPlace("Nowheresville", false, 700, 350);
 
         gameState.buildStreet(pl_pig, pl_bremen, Vehicle.FAST);
         gameState.buildStreet(pl_pig, pl_hanno, Vehicle.MEDIUM);
@@ -249,7 +260,8 @@ public class GameView extends SurfaceView {
         gameState.buildStreet(pl_kiel, pl_berlin, Vehicle.FAST);
 
         int det = gameState.addDetective("Detestive", pl_hanno);
-        int mrx = gameState.addMrX(pl_bremen);
+        int detTwo = gameState.addDetective("Numero dos", pl_kiel);
+        int mrx = gameState.addMrX(pl_forgotten_island);
 
         Player detective = gameState.getPlayerByPort(det);
         Player misterX = gameState.getPlayerByPort(mrx);
@@ -267,7 +279,7 @@ public class GameView extends SurfaceView {
 
         // Set start position of Mr. X
         gameState.getTimeline().addRound(null, gameState.getMrX().getPlace());
-        if(timelineChangeListener != null) {
+        if (timelineChangeListener != null) {
             timelineChangeListener.onTurnAdded(null, gameState.getMrX().getPlace());
         }
 
@@ -283,7 +295,7 @@ public class GameView extends SurfaceView {
 
     public void gameLoop() {
         // ----===== GAME LOOP =====-----
-        while(playing) {
+        while (playing) {
 
             City selectedCityRightNow = selectedCity;
             Vector<Ticket> selectedTicketsRightNow = selectedTickets;
@@ -292,38 +304,40 @@ public class GameView extends SurfaceView {
             switch (currPhase) {
                 case UNINITIALIZED:
                 case MRX_CHOOSE_TURN: { // ----===== Mr. X's turn starts =====-----
-                    if(firstPhaseIteration) {
-                        showMrX = true;
-
-                        showMessageAndWaitForClick("Mr. X's turn. Detectives don't look.", GAME_PHASE.MRX_CHOOSE_TURN);
+                    if (firstPhaseIteration) {
 
                         if (inventoryChangeListener != null) {
                             inventoryChangeListener.onNewInventory(gameState.getInventoryX());
                         }
 
-                        firstPhaseIteration = false;
-                    }
+                        showMessageAndWaitForClick("Mr. X's turn. Detectives don't look.", GAME_PHASE.MRX_CHOOSE_TURN);
 
-                    if(!hasValidMove(gameState.getMrX())) {
-                        changePhase(GAME_PHASE.MRX_NO_VALID_MOVE);
+                        firstPhaseIteration = false;
+                        showMrX = true;
+                        // Let the GAME_PHASE.INTERRUPTED begin
                         break;
                     }
 
-
-                    Vector<Ticket> inventory = new Vector<>(gameState.getInventoryX());
-
-                    if (!inventory.equals(gameState.getInventoryX())) {
-                        inventory = new Vector<>(gameState.getInventoryX());
-                        if (inventoryChangeListener != null) {
-                            inventoryChangeListener.onNewInventory(inventory);
-                        }
+                    if (!hasValidMove(gameState.getMrX())) {
+                        changePhase(GAME_PHASE.MRX_NO_VALID_MOVE);
+                        break;
                     }
 
                     // City was selected
                     if (selectedCityRightNow != null) {
                         // is city connected to MrX's current position?
                         Vehicle connection = gameState.getStreet(gameState.getMrX().getPlace(), selectedCityRightNow.getPlace());
-                        if (connection != null) {
+
+                        // is city empty (no detective)
+                        boolean cityFree = true;
+                        for(int i = 0; i < gameState.getDetectives().size(); i++) {
+                            if(gameState.getDetectives().get(i).getPlace().getCity() == selectedCityRightNow) {
+                                cityFree = false;
+                                break;
+                            }
+                        }
+
+                        if (connection != null && cityFree) {
                             changePhase(GAME_PHASE.MRX_CHOOSE_TICKET);
                             break;
                         }
@@ -344,7 +358,7 @@ public class GameView extends SurfaceView {
                         if (selectedTicketsRightNow.get(0).getVehicle() == gameState.getStreet(gameState.getMrX().getPlace(), selectedCityRightNow.getPlace())) {
                             changePhase(GAME_PHASE.MRX_MOVE_CONFIRM);
                         }
-                    // if the player selects more than one ticket we assume he wants to activate an ability instead
+                        // if the player selects more than one ticket we assume he wants to activate an ability instead
                     } else if (selectedTicketsRightNow.size() > 1) {
                         changePhase(GAME_PHASE.MRX_CHOOSE_ABILITY_TICKETS);
                     }
@@ -355,7 +369,7 @@ public class GameView extends SurfaceView {
                     // if tickets get deselected go back to mrx choosing what to do this turn
                     if (selectedTicketsRightNow == null || selectedTicketsRightNow.size() == 0) {
                         changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
-                     // if one ticket and a (neighbouring) city are selected, we will assume the player tries to move instead.
+                        // if one ticket and a (neighbouring) city are selected, we will assume the player tries to move instead.
                     } else if (selectedCityRightNow != null && selectedTicketsRightNow.size() == 1) {
                         // is city connected to MrX's current position?
                         Vehicle connection = gameState.getStreet(gameState.getMrX().getPlace(), selectedCityRightNow.getPlace());
@@ -388,9 +402,9 @@ public class GameView extends SurfaceView {
 
                 case MRX_MOVE_CONFIRM: { // ----===== waiting for Mr. X to confirm to move and use the selected ticket =====-----
                     // If Tickets or City get deselected (or more than one ticket) go back to choosing what to do
-                    if(selectedTicketsRightNow == null || selectedTicketsRightNow.size() != 1 || selectedCityRightNow == null) {
+                    if (selectedTicketsRightNow == null || selectedTicketsRightNow.size() != 1 || selectedCityRightNow == null) {
                         changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
-                    // Also go back if a city gets selected that is not connected to Mr. X's position or the connecting street can't be travelled with the selected ticket
+                        // Also go back if a city gets selected that is not connected to Mr. X's position or the connecting street can't be travelled with the selected ticket
                     } else if (gameState.getStreet(gameState.getMrX().getPlace(), selectedCity.getPlace()) != selectedTicketsRightNow.get(0).getVehicle()) {
                         changePhase(GAME_PHASE.MRX_CHOOSE_ABILITY_TICKETS);
                     }
@@ -403,11 +417,11 @@ public class GameView extends SurfaceView {
 
                     int ticketIndex = inventory.indexOf(toUseForTravel.get(0));
                     inventory.remove(ticketIndex);
-                    gameState.doMove(0,toTravelTo.getPlace(), toUseForTravel.get(0));
-                    if(inventoryChangeListener != null) {
+                    gameState.doMove(0, toTravelTo.getPlace(), toUseForTravel.get(0));
+                    if (inventoryChangeListener != null) {
                         inventoryChangeListener.onRemove(ticketIndex);
                     }
-                    if(timelineChangeListener != null) {
+                    if (timelineChangeListener != null) {
                         timelineChangeListener.onTurnAdded(toUseForTravel.get(0), toTravelTo.getPlace());
                     }
                     changePhase(GAME_PHASE.MRX_WIN_CHECK);
@@ -422,46 +436,62 @@ public class GameView extends SurfaceView {
                     // for the player to do 2 moves. So not only are two tickets needed, but it has to be possible two use both to travel to neighbouring cities (and their neighbours)
                     Vector<Ticket> simulationInventory = new Vector<>(inventory);
                     // simulate the ability-tickets being thrown away
-                    for(int i = 0; i < toUseForTravel.size(); i++) {
+                    for (int i = 0; i < toUseForTravel.size(); i++) {
                         simulationInventory.remove(toUseForTravel.get(i));
                     }
 
                     Vector<Place> neighbours = gameState.getSurroundingPlaces(gameState.getMrX().getPlace());
-                    Player mrX = gameState.getMrX(); // just to write less
+                    Player mrX = gameState.getMrX();
 
                     boolean movePossible = false;
 
-                    for(int i = 0; i < neighbours.size(); i++) {
-                        Vehicle connection = gameState.getStreet(mrX.getPlace(), neighbours.get(i)); // can't be null (else it wouldn't be returned by getSurroundingPlaces)
+                    for (int i = 0; i < neighbours.size(); i++) {
 
-                        // Check inventory for ticket to get to the current neighbour
-                        for(int j = 0; j < simulationInventory.size(); j++) {
-                            if(simulationInventory.get(j).getVehicle() == connection) {
-                                // don't use this ticket again
-                                Ticket usedAlready = simulationInventory.get(j);
-                                // temporarily remove used ticket
-                                simulationInventory.remove(usedAlready);
-
-                                // we have to make two moves, so check the neighbours of the current neighbour
-                                if(hasValidMove(neighbours.get(i), simulationInventory)) {
-                                    movePossible = true;
-                                    break;
-                                }
+                        // is city empty (no detective)
+                        boolean cityFree = true;
+                        for(int j = 0; j < gameState.getDetectives().size(); j++) {
+                            if(gameState.getDetectives().get(j).getPlace().getCity() == selectedCityRightNow) {
+                                cityFree = false;
+                                break;
                             }
                         }
-                        if(movePossible) {
+
+                        if(cityFree) {
+
+                            Vehicle connection = gameState.getStreet(mrX.getPlace(), neighbours.get(i)); // can't be null (else it wouldn't be returned by getSurroundingPlaces)
+
+                            // Check inventory for ticket to get to the current neighbour
+                            for (int j = 0; j < simulationInventory.size(); j++) {
+                                if (simulationInventory.get(j).getVehicle() == connection) {
+                                    // don't use this ticket again
+                                    Ticket usedAlready = simulationInventory.get(j);
+                                    // temporarily remove used ticket
+                                    simulationInventory.remove(usedAlready);
+
+                                    // we have to make two moves, so check the neighbours of the current neighbour
+                                    if (hasValidMove(neighbours.get(i), gameState.getMrX().getPort())) {
+                                        movePossible = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                        }
+
+
+                        if (movePossible) {
                             break;
                         }
                     }
 
-                    if(!movePossible) {
+                    if (!movePossible) {
                         changePhase(GAME_PHASE.MRX_EXTRA_TURN_NOT_POSSIBLE);
                         break;
                     }
 
                     // Remove the tickets from the copy first, to have access to indexOf
-                    for(Ticket currTicket: toUseForTravel) {
-                        if(inventoryChangeListener != null) {
+                    for (Ticket currTicket : toUseForTravel) {
+                        if (inventoryChangeListener != null) {
                             inventoryChangeListener.onRemove(inventory.indexOf(currTicket));
                         }
                         inventory.remove(currTicket);
@@ -475,14 +505,13 @@ public class GameView extends SurfaceView {
 
                 case MRX_EXTRA_TURN_CHOOSE_TURN: { // ----===== extra turn ability activate and tickets thrown. Wait for user to make his turn =====-----
 
-                    if(selectedCityRightNow != null) {
+                    if (selectedCityRightNow != null) {
                         Vehicle connection = gameState.getStreet(gameState.getMrX().getPlace(), selectedCityRightNow.getPlace());
                         // There just has to be a directly connected city selected and exactly one ticket.
                         // Also the ticket has to match the street connecting Mr. X's position to the selected city
-                        if(     connection != null &&
+                        if (connection != null &&
                                 selectedTicketsRightNow != null && selectedTicketsRightNow.size() == 1 &&
-                                selectedTicketsRightNow.get(0).getVehicle() == connection)
-                        {
+                                selectedTicketsRightNow.get(0).getVehicle() == connection) {
                             changePhase(GAME_PHASE.MRX_EXTRA_TURN_CONFIRM);
                         }
                     }
@@ -490,10 +519,9 @@ public class GameView extends SurfaceView {
                 }
 
                 case MRX_EXTRA_TURN_CONFIRM: { // ----===== extra turn ability got confirmed and city and ticket selected. Wait for confirmation =====-----
-                    if(     selectedCityRightNow == null ||
+                    if (selectedCityRightNow == null ||
                             selectedTicketsRightNow == null || selectedTicketsRightNow.size() != 1 ||
-                            selectedTicketsRightNow.get(0).getVehicle() != gameState.getStreet(gameState.getMrX().getPlace(), selectedCityRightNow.getPlace()))
-                    {
+                            selectedTicketsRightNow.get(0).getVehicle() != gameState.getStreet(gameState.getMrX().getPlace(), selectedCityRightNow.getPlace())) {
                         changePhase(GAME_PHASE.MRX_EXTRA_TURN_CHOOSE_TURN);
                     }
                     break;
@@ -503,18 +531,18 @@ public class GameView extends SurfaceView {
                     // We want to make sure that the user does not go to a place on his first move, from where he can't do his second move (because of missing ticket).
                     boolean canMoveFromGoal = true;
 
-                    if(extraTurnCounter == 1) {
+                    if (extraTurnCounter == 1) {
                         Vector<Ticket> simulationInventory = new Vector<>(gameState.getInventoryX());
 
                         // we wanna simulate the state of the inventory after this first move (and make sure we can move from there)
                         simulationInventory.remove(toUseForTravel.get(0));
 
                         // if this gets set to true while looking for a valid second move, we found one
-                        canMoveFromGoal = hasValidMove(toTravelTo.getPlace(), simulationInventory);
+                        canMoveFromGoal = hasValidMove(toTravelTo.getPlace(), gameState.getMrX().getPort());
                     }
 
                     // this only applies on the first of the two extra turns (which is why I used the NOT-expression for locality)
-                    if(!canMoveFromGoal) {
+                    if (!canMoveFromGoal) {
                         // since we reached this point, there is a valid move (else we wouldn't let the user throw the tickets for this ability),
                         // so let the user know he can't do this turn and then go back to MRX_EXTRA_TURN_CHOOSE_TURN
                         changePhase(GAME_PHASE.MRX_EXTRA_TURN_ONE_NOT_POSSIBLE);
@@ -550,32 +578,36 @@ public class GameView extends SurfaceView {
                     break;
                 }
 
-                case MRX_EXTRA_TURN_NOT_POSSIBLE: {
+                case MRX_EXTRA_TURN_NOT_POSSIBLE:
+                case MRX_EXTRA_TURN_ONE_NOT_POSSIBLE:
+                case DET_EXTRA_TURN_NOT_POSSIBLE: {
                     try {
                         Thread.sleep(4000);
-                    } catch(InterruptedException e) {
+                    } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
-                    break;
-                }
 
-                case MRX_EXTRA_TURN_ONE_NOT_POSSIBLE: {
-                    try {
-                        Thread.sleep(4000);
-                    } catch(InterruptedException e) {
-                        e.printStackTrace();
+                    switch (currPhase) {
+                        case MRX_EXTRA_TURN_NOT_POSSIBLE:
+                            changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
+                            break;
+                        case MRX_EXTRA_TURN_ONE_NOT_POSSIBLE:
+                            changePhase(GAME_PHASE.MRX_EXTRA_TURN_CHOOSE_TURN);
+                            break;
+                        case DET_EXTRA_TURN_NOT_POSSIBLE:
+                            changePhase(GAME_PHASE.DET_CHOOSE_ABILITY_TICKETS);
+                            break;
                     }
-                    changePhase(GAME_PHASE.MRX_EXTRA_TURN_CHOOSE_TURN);
+
                     break;
                 }
 
                 case MRX_SPECIAL: { // ----===== shadow ticket got confirmed, the tickets get used =====-----
                     Vector<Ticket> inventory = new Vector<>(gameState.getInventoryX());
 
-                    for(Ticket currTicket: toUseForTravel) {
+                    for (Ticket currTicket : toUseForTravel) {
                         int ticketIndex = inventory.indexOf(currTicket);
-                        if(inventoryChangeListener != null) {
+                        if (inventoryChangeListener != null) {
                             inventoryChangeListener.onRemove(ticketIndex);
                         }
                         inventory.remove(ticketIndex);
@@ -588,7 +620,7 @@ public class GameView extends SurfaceView {
                     break;
                 }
                 case MRX_SPECIAL_CHOOSE_CITY: { // ----===== Waiting for the user to select a City to be travelled to anonymously =====-----
-                    if(selectedCityRightNow != null && gameState.getStreet(gameState.getMrX().getPlace() , selectedCity.getPlace()) != null) {
+                    if (selectedCityRightNow != null && gameState.getStreet(gameState.getMrX().getPlace(), selectedCity.getPlace()) != null) {
                         changePhase(GAME_PHASE.MRX_SPECIAL_CONFIRM);
                     }
                     break;
@@ -604,7 +636,7 @@ public class GameView extends SurfaceView {
                     Ticket ticketOfShadows = new Ticket(Vehicle.SHADOW, Ability.SHADOW);
                     gameState.doFreeMove(0, toTravelTo.getPlace());
                     gameState.getTimeline().addRound(ticketOfShadows, toTravelTo.getPlace());
-                    if(timelineChangeListener != null) {
+                    if (timelineChangeListener != null) {
                         timelineChangeListener.onTurnAdded(ticketOfShadows, toTravelTo.getPlace());
                     }
                     changePhase(GAME_PHASE.MRX_WIN_CHECK);
@@ -612,8 +644,9 @@ public class GameView extends SurfaceView {
                 }
 
                 case MRX_WIN_CHECK: {
-                    if(gameState.isGameLost()) {
+                    if (gameState.isGameLost()) {
                         System.out.println("Mr. X won! Yay");
+                        changePhase(GAME_PHASE.MRX_WON);
                     } else {
                         System.out.println("Mr. X didn't win =(");
                     }
@@ -624,7 +657,7 @@ public class GameView extends SurfaceView {
                 case MRX_THROW_TICKETS:
                 case DET_THROW_TICKETS: {
                     try {
-                        Thread.sleep(100);
+                        Thread.sleep(200);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -634,10 +667,10 @@ public class GameView extends SurfaceView {
                 case MRX_THROWING_SELECTED_TICKETS: {
                     Vector<Ticket> inventory = new Vector<>(gameState.getInventoryX());
 
-                    for(int i = 0; i < toUseForTravel.size(); i++) {
+                    for (int i = 0; i < toUseForTravel.size(); i++) {
 
                         // update user UI inventory
-                        if(inventoryChangeListener != null) {
+                        if (inventoryChangeListener != null) {
                             inventoryChangeListener.onRemove(inventory.indexOf(toUseForTravel.get(i)));
                         }
 
@@ -648,7 +681,7 @@ public class GameView extends SurfaceView {
                         inventory.remove(toUseForTravel.get(i));
                     }
 
-                    while(gameState.getInventoryX().size() < 8) {
+                    while (gameState.getInventoryX().size() < 8) {
                         Ticket toGive = gameState.drawTicket();
 
                         // add to model inventory
@@ -657,7 +690,7 @@ public class GameView extends SurfaceView {
                         int ticketIndex = inventory.indexOf(toGive);
 
                         // add to user UI inventory
-                        if(inventoryChangeListener != null) {
+                        if (inventoryChangeListener != null) {
                             inventoryChangeListener.onAdd(toGive);
                         }
 
@@ -665,10 +698,16 @@ public class GameView extends SurfaceView {
                         gameState.giveTicket(0, toGive);
                     }
 
+                    // let user take a look at his new tickets and the marvelous animation of removing and adding tickets to/from inventory
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
                     firstPhaseIteration = true;
 
                     changePhase(GAME_PHASE.DET_CHOOSE_MOVE);
-                    showMrX = false;
 
                     break;
                 }
@@ -680,9 +719,56 @@ public class GameView extends SurfaceView {
                         e.printStackTrace();
                     }
 
-                    changePhase(GAME_PHASE.MRX_THROW_TICKETS);
+                    changePhase(GAME_PHASE.MRX_NO_VALID_MOVE_CHOOSE_TURN);
+                    break;
                 }
 
+                case MRX_NO_VALID_MOVE_CHOOSE_TURN:  {
+                    if(selectedTicketsRightNow != null && selectedTicketsRightNow.size() > 0) {
+                        changePhase(GAME_PHASE.MRX_NO_VALID_MOVE_CHOOSE_SPECIAL_TICKETS);
+                    }
+                    break;
+                }
+
+                case MRX_NO_VALID_MOVE_CHOOSE_SPECIAL_TICKETS: {
+                    if(selectedTicketsRightNow == null || selectedTicketsRightNow.size() == 0) {
+                        changePhase(GAME_PHASE.MRX_NO_VALID_MOVE_CHOOSE_TURN);
+                    } else if(selectedTicketsRightNow.size() == 3) {
+                        boolean allTicketsSpecial = true;
+                        for(int i = 0; i < selectedTicketsRightNow.size(); i++) {
+                            if(selectedTicketsRightNow.get(i).getAbility() != Ability.SPECIAL) {
+                                allTicketsSpecial = false;
+                                break;
+                            }
+                        }
+                        if(allTicketsSpecial) {
+                            changePhase(GAME_PHASE.MRX_NO_VALID_MOVE_SPECIAL_ACTIVATION_CONFIRM);
+                        }
+                    }
+                    break;
+                }
+
+                case MRX_NO_VALID_MOVE_SPECIAL_ACTIVATION_CONFIRM: {
+                    if(selectedTicketsRightNow == null || selectedTicketsRightNow.size() != 3) {
+                        changePhase(GAME_PHASE.MRX_NO_VALID_MOVE_CHOOSE_SPECIAL_TICKETS);
+                    } else {
+                        boolean allTicketsSpecial = true;
+                        for(int i = 0; i < selectedTicketsRightNow.size(); i++) {
+                            if(selectedTicketsRightNow.get(i).getAbility() != Ability.SPECIAL) {
+                                allTicketsSpecial = false;
+                                break;
+                            }
+                        }
+
+                        if(!allTicketsSpecial) {
+                            changePhase(GAME_PHASE.MRX_NO_VALID_MOVE_CHOOSE_SPECIAL_TICKETS);
+                        }
+                    }
+                    break;
+                }
+                // --------------------------------------------------------------------------------------------------------
+                // ---------------------------------------------- DETECTIVES ----------------------------------------------
+                // --------------------------------------------------------------------------------------------------------
                 case DET_CHOOSE_MOVE: {
 
                     if (firstPhaseIteration) {
@@ -693,18 +779,23 @@ public class GameView extends SurfaceView {
                         currDetective = gameState.getDetectives().get(0);
 
                         firstPhaseIteration = false;
+                        break;
                     }
+                    showMrX = false;
 
-                    if(!hasValidMove(currDetective)) {
+                    if (!hasValidMove(currDetective)) {
                         changePhase(GAME_PHASE.DET_NO_VALID_MOVE);
                         break;
                     }
 
+                    // Highlight current detective so user knows which one to move
+                    currDetective.getFigure().select();
+
                     // since first all detectives move and then an ability can be activated, we can just
                     // check for a neighbouring city and one ticket (matching the street) selected.
-                    if(selectedCityRightNow != null && selectedTicketsRightNow != null && selectedTicketsRightNow.size() == 1) {
+                    if (selectedCityRightNow != null && selectedTicketsRightNow != null && selectedTicketsRightNow.size() == 1) {
                         Vehicle connection = gameState.getStreet(currDetective.getPlace(), selectedCityRightNow.getPlace());
-                        if(connection != null && connection == selectedTicketsRightNow.get(0).getVehicle()) {
+                        if (connection != null && connection == selectedTicketsRightNow.get(0).getVehicle()) {
                             changePhase(GAME_PHASE.DET_MOVE_CONFIRM);
                         }
                     }
@@ -713,11 +804,11 @@ public class GameView extends SurfaceView {
 
                 case DET_MOVE_CONFIRM: {
                     // check if there is still a move to confirm
-                    if(selectedCityRightNow == null || selectedTicketsRightNow == null || selectedTicketsRightNow.size() != 1) {
+                    if (selectedCityRightNow == null || selectedTicketsRightNow == null || selectedTicketsRightNow.size() != 1) {
                         changePhase(GAME_PHASE.DET_CHOOSE_MOVE);
                     } else {
                         Vehicle connection = gameState.getStreet(currDetective.getPlace(), selectedCityRightNow.getPlace());
-                        if(connection == null || connection != selectedTicketsRightNow.get(0).getVehicle()) {
+                        if (connection == null || connection != selectedTicketsRightNow.get(0).getVehicle()) {
                             changePhase(GAME_PHASE.DET_CHOOSE_MOVE);
                         }
                     }
@@ -731,12 +822,12 @@ public class GameView extends SurfaceView {
                     int ticketIndex = inventory.indexOf(toUseForTravel.get(0));
                     inventory.remove(ticketIndex);
                     gameState.doMove(currDetective.getPort(), toTravelTo.getPlace(), toUseForTravel.get(0));
-                    if(inventoryChangeListener != null) {
+                    if (inventoryChangeListener != null) {
                         inventoryChangeListener.onRemove(ticketIndex);
                     }
-                    if(timelineChangeListener != null) {
-                        timelineChangeListener.onTurnAdded(toUseForTravel.get(0), toTravelTo.getPlace());
-                    }
+
+                    // Remove highlighting because turn is over for that detective
+                    currDetective.getFigure().deselect();
 
                     // Check win-condition right after detective moved (waiting until all detectives have moved would be really weird for the player
                     changePhase(GAME_PHASE.DET_WIN_CHECK);
@@ -746,12 +837,12 @@ public class GameView extends SurfaceView {
 
                 case DET_WIN_CHECK: {
 
-                    if(gameState.isGameLost()) {
+                    if (gameState.isGameWon()) {
                         changePhase(GAME_PHASE.DET_WON);
                         break;
                     }
 
-                    if(gameState.getDetectives().lastElement().getPort() == currDetective.getPort()) { // avoiding equals here
+                    if (gameState.getDetectives().lastElement().getPort() == currDetective.getPort()) { // avoiding equals here
                         changePhase(GAME_PHASE.DET_SELECT_NEXT);
                     } else {
                         int detIndex = gameState.getDetectives().indexOf(currDetective);
@@ -764,68 +855,71 @@ public class GameView extends SurfaceView {
 
                 case DET_SELECT_NEXT: {
                     // if user clicks confirm without selecting tickets, the turn will end (DET_THROW_TICKETS), else we will assume they want to activate an ability
-                    if(selectedTicketsRightNow != null && selectedTicketsRightNow.size() > 0) {
+                    if (selectedTicketsRightNow != null && selectedTicketsRightNow.size() > 0) {
                         changePhase(GAME_PHASE.DET_CHOOSE_ABILITY_TICKETS);
                     }
                     break;
                 }
 
                 case DET_CHOOSE_ABILITY_TICKETS: {
-                    if(selectedTicketsRightNow == null || selectedTicketsRightNow.size() == 0) {
+                    if (selectedTicketsRightNow == null || selectedTicketsRightNow.size() == 0) {
                         changePhase(GAME_PHASE.DET_SELECT_NEXT);
-                        break;
-                    } else if(selectedTicketsRightNow.size() >= 3 && selectedTicketsRightNow.size() <= 5) {
+                    } else if (selectedTicketsRightNow.size() >= 3 && selectedTicketsRightNow.size() <= 5) {
                         Ability sampleAbility = selectedTicketsRightNow.get(0).getAbility();
                         boolean ticketsAreAllTheSame = true;
 
-                        for(int i = 0; i < selectedTicketsRightNow.size(); i++) {
-                            if(sampleAbility != selectedTicketsRightNow.get(i).getAbility()) {
+                        for (int i = 0; i < selectedTicketsRightNow.size(); i++) {
+                            if (sampleAbility != selectedTicketsRightNow.get(i).getAbility()) {
                                 ticketsAreAllTheSame = false;
                             }
                         }
 
-                        if(ticketsAreAllTheSame) {
+                        if (ticketsAreAllTheSame) {
                             changePhase(GAME_PHASE.DET_ABILITY_CONFIRM);
-                            break;
                         }
                     }
+                    break;
                 }
 
                 case DET_ABILITY_CONFIRM: {
-                    try {
-                        Thread.sleep(4000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                    if (selectedTicketsRightNow == null || selectedTicketsRightNow.size() < 3 || selectedTicketsRightNow.size() > 5) {
+                        changePhase(GAME_PHASE.DET_CHOOSE_ABILITY_TICKETS);
+                    } else {
+                        boolean allTicketsAreTheSame = true;
+                        Ability sampleAbility = selectedTicketsRightNow.get(0).getAbility();
+                        for(int i = 0; i < selectedTicketsRightNow.size(); i++) {
+                            if(selectedTicketsRightNow.get(i).getAbility() != sampleAbility) {
+                                allTicketsAreTheSame = false;
+                            }
+                        }
+                        if(!allTicketsAreTheSame) {
+                            changePhase(GAME_PHASE.DET_CHOOSE_ABILITY_TICKETS);
+                        }
                     }
+                    break;
                 }
 
-                case DET_ABILITY: {
-                    Ability sampleAbility = toUseForTravel.get(0).getAbility();
+                case DET_SPECIAL: {
 
                     Vector<Ticket> inventory = new Vector<>(gameState.getInventory());
 
-                    for(int i = 0; i <  toUseForTravel.size(); i++) {
+                    for (int i = 0; i < toUseForTravel.size(); i++) {
                         int ticketIndex = inventory.indexOf(toUseForTravel.get(i));
-                        if(inventoryChangeListener != null) {
+                        if (inventoryChangeListener != null) {
                             inventoryChangeListener.onRemove(ticketIndex);
                         }
                         inventory.remove(ticketIndex);
                     }
 
-                    gameState.activateAbility(currDetective.getPort(), toUseForTravel, sampleAbility);
+                    gameState.activateAbility(currDetective.getPort(), toUseForTravel, Ability.SPECIAL);
 
                     abilityPower = toUseForTravel.size() - 3; // Value between 0-2
 
-                    if(sampleAbility == Ability.EXTRA_TURN) {
-                        changePhase(GAME_PHASE.MRX_EXTRA_TURN);
-                    } else {
-                        changePhase(GAME_PHASE.DET_SPECIAL);
-                    }
-
+                    changePhase(GAME_PHASE.DET_SPECIAL_DO);
                     break;
                 }
 
-                case DET_SPECIAL: {
+                case DET_SPECIAL_DO: {
 
                     // Starting positions are marked on turn/index 0. When reaching this point Mr. X already did his move this round.
                     // The second time the detectives can activate their ability for example timeline.size() will be 3 (start, first move and second move of Mr. X)
@@ -834,15 +928,77 @@ public class GameView extends SurfaceView {
                     // if 3 tickets are used, mark position 4 moves before the current position, for 4 tickets 3 before, for 5 tickets 2 before
                     int roundToMark = Math.max(currRound - (4 - abilityPower), 0);
 
-                    if(timelineChangeListener != null) {
-                        timelineChangeListener.onTurnMarked(currRound - (4 - abilityPower));
+                    if (timelineChangeListener != null) {
+                        timelineChangeListener.onTurnMarked(roundToMark);
                     }
+
+                    markedCities.add(gameState.getTimeline().getPlaceForRound(roundToMark).getCity());
 
                     changePhase(GAME_PHASE.DET_THROW_TICKETS);
                     break;
                 }
 
                 case DET_EXTRA_TURN: {
+
+                    abilityPower = toUseForTravel.size() - 3; // Value between 0-2
+
+                    Vehicle potentialFreeTicket;
+                    switch (abilityPower) {
+                        case 0:
+                            potentialFreeTicket = Vehicle.SLOW;
+                            break;
+                        case 1:
+                            potentialFreeTicket = Vehicle.MEDIUM;
+                            break;
+                        default:
+                            potentialFreeTicket = Vehicle.FAST;
+                            break;
+                    }
+
+                    // we will assume that we can not use the ticket until proven otherwise
+                    boolean canUseTicket = false;
+
+                    for(int i = 0; i < gameState.getDetectives().size(); i++) {
+                        Player currDetective = gameState.getDetectives().get(i);
+
+                        Vector<Place> neighbours = gameState.getSurroundingPlaces(currDetective.getPlace());
+
+                        // Check all the cities the current detective could reach
+                        for(int j = 0; j < neighbours.size(); j++) {
+                            Vehicle connection = gameState.getStreet(currDetective.getPlace(), neighbours.get(j));
+
+                            if(connection == potentialFreeTicket) {
+                                canUseTicket = true;
+                                break;
+                            }
+                        }
+                        if(canUseTicket) {
+                            break;
+                        }
+                    }
+
+                    if(!canUseTicket) {
+                        changePhase(GAME_PHASE.DET_EXTRA_TURN_NOT_POSSIBLE);
+                        break;
+                    }
+
+                    Vector<Ticket> inventory = new Vector<>(gameState.getInventory());
+
+                    for (int i = 0; i < toUseForTravel.size(); i++) {
+                        int ticketIndex = inventory.indexOf(toUseForTravel.get(i));
+                        if (inventoryChangeListener != null) {
+                            inventoryChangeListener.onRemove(ticketIndex);
+                        }
+                        inventory.remove(ticketIndex);
+                    }
+
+                    gameState.activateAbility(currDetective.getPort(), toUseForTravel, Ability.EXTRA_TURN);
+
+                    changePhase(GAME_PHASE.DET_EXTRA_TURN_CHOOSE_TURN);
+
+                }
+
+                case DET_EXTRA_TURN_CHOOSE_TURN: {
                     Vehicle freeTicket;
 
                     switch (abilityPower) {
@@ -857,10 +1013,10 @@ public class GameView extends SurfaceView {
                             break;
                     }
 
-                    if(selectedFigureRightNow != null && selectedCityRightNow != null) {
+                    if (selectedFigureRightNow != null && selectedCityRightNow != null) {
                         Vehicle connection = gameState.getStreet(selectedFigureRightNow.getPlayer().getPlace(), selectedCityRightNow.getPlace());
 
-                        if(connection == freeTicket) {
+                        if (connection == freeTicket) {
                             changePhase(GAME_PHASE.DET_EXTRA_TURN_CONFIRM);
                         }
                     }
@@ -881,16 +1037,14 @@ public class GameView extends SurfaceView {
                             break;
                     }
 
-                    if(     selectedFigureRightNow == null || selectedCityRightNow == null ||
-                            gameState.getStreet(selectedFigureRightNow.getPlayer().getPlace(), selectedCityRightNow.getPlace()) != freeTicket)
-                    {
-                        changePhase(GAME_PHASE.DET_EXTRA_TURN);
+                    if (selectedFigureRightNow == null || selectedCityRightNow == null ||
+                            gameState.getStreet(selectedFigureRightNow.getPlayer().getPlace(), selectedCityRightNow.getPlace()) != freeTicket) {
+                        changePhase(GAME_PHASE.DET_EXTRA_TURN_CHOOSE_TURN);
                     }
                     break;
                 }
 
                 case DET_EXTRA_TURN_MOVE: {
-                    Vector<Ticket> inventory = new Vector<>(gameState.getInventory());
 
                     gameState.doFreeMove(toTravel.getPlayer().getPort(), toTravelTo.getPlace());
 
@@ -900,7 +1054,7 @@ public class GameView extends SurfaceView {
                 }
 
                 case DET_EXTRA_TURN_WIN_CHECK: {
-                    if(gameState.isGameWon()) {
+                    if (gameState.isGameWon()) {
                         changePhase(GAME_PHASE.DET_WON);
                         break;
                     }
@@ -911,10 +1065,10 @@ public class GameView extends SurfaceView {
                 case DET_THROWING_SELECTED_TICKETS: {
                     Vector<Ticket> inventory = new Vector<>(gameState.getInventory());
 
-                    for(int i = 0; i < toUseForTravel.size(); i++) {
+                    for (int i = 0; i < toUseForTravel.size(); i++) {
 
                         // update user UI inventory
-                        if(inventoryChangeListener != null) {
+                        if (inventoryChangeListener != null) {
                             inventoryChangeListener.onRemove(inventory.indexOf(toUseForTravel.get(i)));
                         }
 
@@ -925,7 +1079,7 @@ public class GameView extends SurfaceView {
                         inventory.remove(toUseForTravel.get(i));
                     }
 
-                    while(gameState.getInventory().size() < gameState.getDetectives().size() + 4) {
+                    while (gameState.getInventory().size() < gameState.getDetectives().size() + 4) {
                         Ticket toGive = gameState.drawTicket();
 
                         // add to model inventory
@@ -934,7 +1088,7 @@ public class GameView extends SurfaceView {
                         int ticketIndex = inventory.indexOf(toGive);
 
                         // add to user UI inventory
-                        if(inventoryChangeListener != null) {
+                        if (inventoryChangeListener != null) {
                             inventoryChangeListener.onAdd(toGive);
                         }
 
@@ -944,8 +1098,14 @@ public class GameView extends SurfaceView {
 
                     firstPhaseIteration = true;
 
+                    // let user take a look at his new tickets and the marvelous animation of removing and adding tickets to/from inventory
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
                     changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
-                    showMrX = true;
 
                     break;
                 }
@@ -957,7 +1117,7 @@ public class GameView extends SurfaceView {
                         e.printStackTrace();
                     }
 
-                    if(gameState.getDetectives().lastElement().getPort() == currDetective.getPort()) { // avoiding equals here
+                    if (currDetective.getPort() == gameState.getDetectives().lastElement().getPort()) { // avoiding equals here
                         changePhase(GAME_PHASE.DET_SELECT_NEXT);
                     } else {
                         int detIndex = gameState.getDetectives().indexOf(currDetective);
@@ -970,6 +1130,7 @@ public class GameView extends SurfaceView {
 
                 case MRX_WON:
                 case DET_WON: {
+                    showMrX = true;
                     try {
                         Thread.sleep(5000);
                     } catch (InterruptedException e) {
@@ -989,33 +1150,52 @@ public class GameView extends SurfaceView {
     }
 
     private void fillInventory() {
-        while(gameState.getInventory().size() < 4 + gameState.getDetectives().size()) {
+        while (gameState.getInventory().size() < 4 + gameState.getDetectives().size()) {
             Ticket toAdd = gameState.drawTicket();
             gameState.giveTicket(1, toAdd);
         }
     }
 
     private void fillInventoryX() {
-        while(gameState.getInventoryX().size() < 8) {
+        while (gameState.getInventoryX().size() < 8) {
             Ticket toAdd = gameState.drawTicket();
             gameState.giveTicket(0, toAdd);
         }
     }
 
-    private boolean hasValidMove(final Place from, final Vector<Ticket> inventory) {
+    private boolean hasValidMove(final Place from, final int port) {
+        Vector<Ticket> inventory;
+        boolean isMrX = port == 0;
+        if(isMrX) {
+            inventory = gameState.getInventoryX();
+        } else {
+            inventory = gameState.getInventory();
+        }
+
         Vector<Place> neighbours = gameState.getSurroundingPlaces(from);
 
         // look at neighbours
-        for(int i = 0; i < neighbours.size(); i++) {
+        for (int i = 0; i < neighbours.size(); i++) {
             // get ticket needed to visit current neighbour
             Vehicle connection = gameState.getStreet(from, neighbours.get(i));
 
-            // look into inventory
-            for(int j = 0; j < inventory.size(); j++) {
-                // if needed ticket is in inventory
-                if(connection == inventory.get(j).getVehicle()) {
-                    // that's a valid move
-                    return true;
+            boolean placeOccupied = false;
+            if(isMrX) {
+                for(int j = 0; j < gameState.getDetectives().size(); j++) {
+                    if(neighbours.get(i) == gameState.getDetectives().get(j).getPlace()) {
+                        placeOccupied = true;
+                    }
+                }
+            }
+
+            if(!isMrX || !placeOccupied) {
+                // look into inventory
+                for (int j = 0; j < inventory.size(); j++) {
+                    // if needed ticket is in inventory
+                    if (connection == inventory.get(j).getVehicle()) {
+                        // that's a valid move
+                        return true;
+                    }
                 }
             }
         }
@@ -1023,11 +1203,7 @@ public class GameView extends SurfaceView {
     }
 
     private boolean hasValidMove(final Player toCheckFor) {
-        if(toCheckFor.getPort() == 0) {
-            return hasValidMove(toCheckFor.getPlace(), gameState.getInventoryX());
-        } else {
-            return hasValidMove(toCheckFor.getPlace(), gameState.getInventory());
-        }
+        return hasValidMove(toCheckFor.getPlace(), toCheckFor.getPort());
     }
 
     public void confirmSelection() {
@@ -1036,10 +1212,10 @@ public class GameView extends SurfaceView {
         toTravelTo = selectedCity;
 
 
-        switch(currPhase) {
+        switch (currPhase) {
             case MRX_MOVE_CONFIRM: {
                 // if city was deselected in the meantime
-                if(toTravelTo == null) {
+                if (toTravelTo == null) {
                     return;
                 }
 
@@ -1050,8 +1226,8 @@ public class GameView extends SurfaceView {
                 break;
             }
             case MRX_ABILITY_CONFIRM: {
-                if(toUseForTravel.size() == 3) {
-                    if(toUseForTravel.get(0).getAbility() == Ability.EXTRA_TURN) {
+                if (toUseForTravel.size() == 3) {
+                    if (toUseForTravel.get(0).getAbility() == Ability.EXTRA_TURN) {
                         changePhase(GAME_PHASE.MRX_EXTRA_TURN);
                     } else {
                         changePhase(GAME_PHASE.MRX_SPECIAL);
@@ -1061,43 +1237,62 @@ public class GameView extends SurfaceView {
             }
             case MRX_EXTRA_TURN_CONFIRM: // The conditions were checked before, just set the selectedCity and Ticket to use
             case MRX_SPECIAL_CONFIRM:
-            case DET_MOVE_CONFIRM:
-            case DET_ABILITY_CONFIRM: {
+            case DET_MOVE_CONFIRM: {
 
-                if(selectedCity != null) {
+                if (selectedCity != null) {
                     selectedCity.deselect();
                     selectedCity = null;
                 }
 
-                if(currPhase == GAME_PHASE.MRX_SPECIAL_CONFIRM) {
+                if (currPhase == GAME_PHASE.MRX_SPECIAL_CONFIRM) {
                     changePhase(GAME_PHASE.MRX_SPECIAL_MOVE);
-
-                } else if(currPhase == GAME_PHASE.MRX_EXTRA_TURN_CONFIRM) {
+                } else if (currPhase == GAME_PHASE.MRX_EXTRA_TURN_CONFIRM) {
                     changePhase(GAME_PHASE.MRX_EXTRA_TURN_MOVE);
-                } else if(currPhase == GAME_PHASE.DET_MOVE_CONFIRM) {
+                } else if (currPhase == GAME_PHASE.DET_MOVE_CONFIRM) {
                     changePhase(GAME_PHASE.DET_MOVE);
-                } else if(currPhase == GAME_PHASE.DET_ABILITY_CONFIRM) {
-                    changePhase(GAME_PHASE.DET_ABILITY);
                 }
                 break;
             }
 
-            case DET_THROW_TICKETS: {
-                changePhase(GAME_PHASE.MRX_THROWING_SELECTED_TICKETS);
+            case MRX_NO_VALID_MOVE_CHOOSE_TURN: {
+                changePhase(GAME_PHASE.MRX_THROW_TICKETS);
+                break;
+            }
+
+            case MRX_NO_VALID_MOVE_SPECIAL_ACTIVATION_CONFIRM: {
+                changePhase(GAME_PHASE.MRX_SPECIAL);
                 break;
             }
 
             case MRX_THROW_TICKETS: {
+                changePhase(GAME_PHASE.MRX_THROWING_SELECTED_TICKETS);
+                break;
+            }
+
+            case DET_THROW_TICKETS: {
                 changePhase(GAME_PHASE.DET_THROWING_SELECTED_TICKETS);
                 break;
             }
 
             case DET_SELECT_NEXT: {
                 changePhase(GAME_PHASE.DET_THROW_TICKETS);
+                break;
+            }
+
+            case DET_ABILITY_CONFIRM: {
+                if(toUseForTravel.size() >= 3 && toUseForTravel.size() <= 5) {
+                    if(toUseForTravel.get(0).getAbility() == Ability.EXTRA_TURN) {
+                        changePhase(GAME_PHASE.DET_EXTRA_TURN);
+                    } else {
+                        changePhase(GAME_PHASE.DET_SPECIAL);
+                    }
+                }
+                break;
             }
 
             case DET_EXTRA_TURN_CONFIRM: {
                 changePhase(GAME_PHASE.DET_EXTRA_TURN_MOVE);
+                break;
             }
         }
     }
@@ -1142,7 +1337,7 @@ public class GameView extends SurfaceView {
         @Override
         public boolean onScroll(MotionEvent event1, MotionEvent event2, float distanceX, float distanceY) {
 
-            if(!scaling) {
+            if (!scaling) {
                 // Bounds x-Axis
                 if (viewPortX - distanceX > 0) {
                     viewPortX = 0;
@@ -1178,7 +1373,8 @@ public class GameView extends SurfaceView {
     }
 
     private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
-        @Override public boolean onScale(ScaleGestureDetector detector) {
+        @Override
+        public boolean onScale(ScaleGestureDetector detector) {
 
             float oldScaleFactor = mapScaleFactor;
 
@@ -1219,11 +1415,12 @@ public class GameView extends SurfaceView {
     @Override
     public boolean onTouchEvent(MotionEvent e) {
         // If a user message is displayed
-        if(currPhase == GAME_PHASE.INTERRUPTED) {
+        if (currPhase == GAME_PHASE.INTERRUPTED) {
             // When the text is fully displayed and the user is allowed to continue
-            if(continuable) {
+            if (continuable) {
                 changePhase(nextPhase);
                 nextPhase = null;
+                currAlpha = 0;
                 return true;
             }
         } else {
@@ -1255,33 +1452,37 @@ public class GameView extends SurfaceView {
                         }
                     }
 
-                    // same thing for players
-                    boolean madeFigureSelection = false;
-                    for(int i = 0; i < gameState.getDetectives().size(); i++) {
-                        Player player = gameState.getDetectives().get(i);
 
-                        if(player.getFigure().collisionCheck((e.getX() + (-viewPortX)) * (1 / mapScaleFactor), (e.getY() + (-viewPortY)) * (1 / mapScaleFactor))) {
-                            if (selectedFigure != null) {
-                                selectedFigure.deselect();
+                    // same thing for players, but they may only be selected for the extra turn ability
+                    boolean madeFigureSelection = false;
+                    if (currPhase == GAME_PHASE.DET_EXTRA_TURN_CHOOSE_TURN || currPhase == GAME_PHASE.DET_EXTRA_TURN_CONFIRM) {
+
+                        for (int i = 0; i < gameState.getDetectives().size(); i++) {
+                            Player player = gameState.getDetectives().get(i);
+
+                            if (player.getFigure().collisionCheck((e.getX() + (-viewPortX)) * (1 / mapScaleFactor), (e.getY() + (-viewPortY)) * (1 / mapScaleFactor))) {
+                                if (selectedFigure != null) {
+                                    selectedFigure.deselect();
+                                }
+                                if (player.getFigure().equals(selectedFigure)) {
+                                    selectedFigure = null;
+                                    // If clicked on a different city
+                                } else {
+                                    selectedFigure = player.getFigure();
+                                    selectedFigure.select();
+                                }
+                                madeFigureSelection = true;
                             }
-                            if (player.getFigure().equals(selectedFigure)) {
-                                selectedFigure = null;
-                                // If clicked on a different city
-                            } else {
-                                selectedFigure = player.getFigure();
-                                selectedFigure.select();
-                            }
-                            madeFigureSelection = true;
                         }
                     }
 
                     // If no place or figure at all was clicked/the background was clicked, deselect city and figure
-                    if(!madeCitySelection && !madeFigureSelection) {
-                        if(selectedCity != null) {
+                    if (!madeCitySelection && !madeFigureSelection) {
+                        if (selectedCity != null) {
                             selectedCity.deselect();
                             selectedCity = null;
                         }
-                        if(selectedFigure != null) {
+                        if (selectedFigure != null) {
                             selectedFigure.deselect();
                             selectedFigure = null;
                         }
@@ -1304,13 +1505,13 @@ public class GameView extends SurfaceView {
     }
 
     protected void update() {
-        for(Place toUpdate: gameState.getPlaces()) {
+        for (Place toUpdate : gameState.getPlaces()) {
             toUpdate.getCity().update();
         }
-        for(Player toUpdate: gameState.getDetectives()) {
+        for (Player toUpdate : gameState.getDetectives()) {
             toUpdate.getFigure().update();
         }
-        if(gameState.getMrX() != null) {
+        if (gameState.getMrX() != null) {
             gameState.getMrX().getFigure().update();
         }
     }
@@ -1318,24 +1519,94 @@ public class GameView extends SurfaceView {
     // --- Map (Debug/Testing) ---
     // private Paint onlyBorders = new Paint();
     // float massstab = 8f;
-    @ColorInt int currColor = 255;
+    @ColorInt
+    int currAlpha = 0;
 
     protected void draw() {
-        if(surfaceHolder.getSurface().isValid()) {
+        if (surfaceHolder.getSurface().isValid()) {
             canvas = surfaceHolder.lockCanvas();
 
-            if(currPhase == GAME_PHASE.INTERRUPTED) {
+            // Set Viewport and map-position
+            canvas.clipRect(dstViewport);
+            canvas.translate(viewPortX, viewPortY);
+            canvas.scale(mapScaleFactor, mapScaleFactor);
+            // Start of by clearing the old picture with a new coat of white
+            canvas.drawColor(Color.WHITE);
+
+            // save color so we can restore it later (will/should be black)
+            @ColorInt int prevColor = paint.getColor();
+            // Draw streets
+            for (Edge<Place, Vehicle> currStreet : gameState.getStreets()) {
+                City start = currStreet.getSource().getData().getCity();
+                City target = currStreet.getTarget().getData().getCity();
+
+                float startX = start.getX() + start.getWidth() / 2f;
+                float startY = start.getY() + start.getHeight() / 2f;
+
+                float targetX = target.getX() + target.getWidth() / 2f;
+                float targetY = target.getY() + target.getHeight() / 2f;
+
+                switch (gameState.getStreet(start.getPlace(), target.getPlace())) {
+                    case SLOW:
+                        paint.setColor(Color.RED);
+                        break;
+                    case MEDIUM:
+                        paint.setColor(Color.YELLOW);
+                        break;
+                    case FAST:
+                        paint.setColor(Color.GREEN);
+                }
+                canvas.drawLine(startX, startY, targetX, targetY, paint);
+            }
+
+            paint.setColor(prevColor);
+
+            // Draw Cities
+            for (int i = 0; i < gameState.getPlaces().size(); i++) {
+                gameState.getPlaces().get(i).getCity().draw(canvas, paint);
+            }
+
+            // Draw marking of marked cities
+            for (int i = 0; i < markedCities.size(); i++) {
+                City city = markedCities.get(i);
+
+                float padding = city.getWidth() * 0.1f;
+
+                // Colors will just repeat once we run out of them...
+                paint.setColor(markColorCoding[i++ % markColorCoding.length]);
+
+                canvas.drawOval(city.getX() - padding, city.getY() - padding, city.getX() + city.getWidth() + padding, city.getY() + city.getHeight() + padding, paint);
+                paint.setColor(Color.WHITE);
+                canvas.drawOval(city.getX(), city.getY(), city.getX() + city.getWidth(), city.getY() + city.getHeight(), paint);
+            }
+
+            // Draw detective Figures
+            for (Player toDraw : gameState.getDetectives()) {
+                toDraw.getFigure().draw(canvas, paint);
+            }
+            // Draw Mr. X Figure
+            if (showMrX) {
+                if (gameState.getMrX() != null) {
+                    gameState.getMrX().getFigure().draw(canvas, paint);
+                }
+            }
+
+            // BLACK SCREEN FOR USER MESSAGES (and censoring between rounds)
+            // Draw on top of the map, not instead of (like I did before)
+            if (currPhase == GAME_PHASE.INTERRUPTED) {
+                canvas.translate(-viewPortX, -viewPortY);
+                canvas.scale(1 / mapScaleFactor, 1 / mapScaleFactor);
 
                 final int increment = 10;
-                if(currColor - increment > 0) {
-                    canvas.drawColor(Color.rgb(currColor, currColor, currColor));
-                    currColor -= increment;
+                if (currAlpha + increment < 255) {
+                    paint.setColor(Color.BLACK);
+                    paint.setAlpha(currAlpha);
+                    canvas.drawRect(0f, 0f, mapWidth, mapHeight, paint);
+                    currAlpha += increment;
                 } else {
                     // paint it, black
                     canvas.drawColor(Color.BLACK);
 
-                    // remember color now
-                    @ColorInt int prevColor = paint.getColor();
                     // set color to white
                     paint.setColor(Color.WHITE);
                     Paint smallerTxtPaint = new Paint(paint);
@@ -1343,91 +1614,26 @@ public class GameView extends SurfaceView {
                     smallerTxtPaint.setAlpha(255 / 3 * 2);
 
                     // text in white
-                    canvas.drawText(userMessage, getWidth() / 2f, getHeight() / 2f, paint);
+                    canvas.drawText(userMessage, getWidth() / 2f, getHeight() / 2f, paint); // TODO: why is getWidth() unreliable? (It sometimes only gets the width without the menus, even though they are gone since quite some time once we get here)
                     canvas.drawText("- Touch to continue -", getWidth() / 2f, getHeight() - 75, smallerTxtPaint);
                     // reset color
                     paint.setColor(prevColor);
 
                     continuable = true;
                 }
-            } else if(currPhase != GAME_PHASE.UNINITIALIZED) {
-
-                // Set Viewport and map-position
-                canvas.clipRect(dstViewport);
-                canvas.translate(viewPortX, viewPortY);
-                canvas.scale(mapScaleFactor, mapScaleFactor);
-                // Start of by clearing the old picture with a new coat of white
-                canvas.drawColor(Color.WHITE);
-
-                // save color so we can restore it later (will/should be black)
-                @ColorInt int prevColor = paint.getColor();
-                // Draw streets
-                for (Edge<Place, Vehicle> currStreet : gameState.getStreets()) {
-                    City start = currStreet.getSource().getData().getCity();
-                    City target = currStreet.getTarget().getData().getCity();
-
-                    float startX = start.getX() + start.getWidth() / 2f;
-                    float startY = start.getY() + start.getHeight() / 2f;
-
-                    float targetX = target.getX() + target.getWidth() / 2f;
-                    float targetY = target.getY() + target.getHeight() / 2f;
-
-                    switch (gameState.getStreet(start.getPlace(), target.getPlace())) {
-                        case SLOW:
-                            paint.setColor(Color.RED);
-                            break;
-                        case MEDIUM:
-                            paint.setColor(Color.YELLOW);
-                            break;
-                        case FAST:
-                            paint.setColor(Color.GREEN);
-                    }
-                    canvas.drawLine(startX, startY, targetX, targetY, paint);
-                }
-
-
-                // Draw Cities
-                int markedCityCounter = 0;
-                for (int i = 0; i < gameState.getPlaces().size() ; i++) {
-                    Place toDraw = gameState.getPlaces().get(i);
-                    if(toDraw.getCity().isMarked()) {
-                        float padding = toDraw.getCity().getWidth() * 0.1f;
-                        City city = toDraw.getCity();
-
-                        // Colors will just repeat once we run out of them...
-                        paint.setColor(markColorCoding[markedCityCounter++ % markColorCoding.length]);
-
-                        canvas.drawOval(city.getX() - padding, city.getY() - padding, city.getX() + city.getWidth() + padding, city.getY() + city.getHeight() + padding, paint);
-                        paint.setColor(Color.WHITE);
-                        canvas.drawOval(city.getX(), city.getY(), city.getX() + city.getWidth(), city.getY() + city.getHeight(), paint);
-                    }
-                    paint.setColor(prevColor);
-                    toDraw.getCity().draw(canvas, paint);
-                }
-
-                // Draw detective Figures
-                for (Player toDraw : gameState.getDetectives()) {
-                    toDraw.getFigure().draw(canvas, paint);
-                }
-                // Draw Mr. X Figure
-                if(showMrX) {
-                    if (gameState.getMrX() != null) {
-                        gameState.getMrX().getFigure().draw(canvas, paint);
-                    }
-                }
-
-                // --- Map (Debug/Testing, unfinished) ---
-                // onlyBorders.setStyle(Paint.Style.STROKE);
-                // onlyBorders.setStrokeWidth(15);
-                // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)), -viewPortY, -viewPortX + getWidth(), -viewPortY + (mapHeight / massstab), onlyBorders);
-                // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)) + (-viewPortX / massstab), -viewPortY + (-viewPortY / massstab), (-viewPortX + getWidth() - (mapWidth / massstab)) + (-viewPortX / massstab) + (getWidth() / massstab * (1 / mapScaleFactor)), -viewPortY + (-viewPortY / massstab) + (getHeight() / massstab), onlyBorders);
-            } else {
-                canvas.drawColor(Color.WHITE);
+                paint.setAlpha(255);
             }
+
+            // --- Map (Debug/Testing, unfinished) ---
+            // onlyBorders.setStyle(Paint.Style.STROKE);
+            // onlyBorders.setStrokeWidth(15);
+            // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)), -viewPortY, -viewPortX + getWidth(), -viewPortY + (mapHeight / massstab), onlyBorders);
+            // canvas.drawRect((-viewPortX + getWidth() - (mapWidth / massstab)) + (-viewPortX / massstab), -viewPortY + (-viewPortY / massstab), (-viewPortX + getWidth() - (mapWidth / massstab)) + (-viewPortX / massstab) + (getWidth() / massstab * (1 / mapScaleFactor)), -viewPortY + (-viewPortY / massstab) + (getHeight() / massstab), onlyBorders);
             surfaceHolder.unlockCanvasAndPost(canvas);
         }
-
     }
+
+
 
     public void pause() {
         gameThread.setRunning(false);

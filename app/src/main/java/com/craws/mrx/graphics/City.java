@@ -10,7 +10,6 @@ import com.craws.mrx.state.Place;
 
 public class City extends Render {
     private Place place;
-    private boolean marked;
 
     // all the frames
     private static class FRAMES {
@@ -26,7 +25,6 @@ public class City extends Render {
     public City(final Context context, final Place place) {
         super(BitmapFactory.decodeResource(context.getResources(), R.drawable.city_sprites), FRAMES.FRAMES_W, FRAMES.FRAMES_H, 0f, 0f);
         this.place = place;
-        marked = false;
 
         currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
         updateViewport();
@@ -35,7 +33,6 @@ public class City extends Render {
     public City(final Context context, final Place place, final float x, final float y) {
         super(BitmapFactory.decodeResource(context.getResources() , R.drawable.city_sprites), FRAMES.FRAMES_W, FRAMES.FRAMES_H, x, y);
         this.place = place;
-        marked = false;
 
         currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
     }
@@ -43,7 +40,6 @@ public class City extends Render {
     public City(final Context context, final Place place, final float x, final float y, final int width, final int height) {
         super(BitmapFactory.decodeResource(context.getResources(), R.drawable.city_sprites), FRAMES.FRAMES_W, FRAMES.FRAMES_H, x, y, width, height);
         this.place = place;
-        marked = false;
 
         currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
     }
@@ -66,14 +62,6 @@ public class City extends Render {
 
     public void deselect() {
         currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
-    }
-
-    public boolean isMarked() {
-        return marked;
-    }
-
-    public void setMarked(final boolean marked) {
-        this.marked = marked;
     }
 
     public Place getPlace() {

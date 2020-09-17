@@ -368,8 +368,9 @@ public class GameState {
         // check if Mr. X is surrounded (detectives on all adjacent nodes/places)
         Vector<Integer> escapeRoutes = map.getAdjacentNodeIDs(map.getIndexByData(mrX.getPlace()));
         boolean escapeAvailable = false;
+        boolean placeOccupied = false;
         for (int i = 0; i < escapeRoutes.size() && (!escapeAvailable); i++) {
-            boolean placeOccupied = false;
+            placeOccupied = false;
             for(Player currPlayer: detectives) {
                 if ((map.getNodeData(escapeRoutes.get(i)).equals(currPlayer.getPlace()))) {
                     placeOccupied = true;
@@ -378,6 +379,7 @@ public class GameState {
             }
             escapeAvailable = !placeOccupied;
         }
+        escapeAvailable = !placeOccupied;
 
         return !escapeAvailable;
     }

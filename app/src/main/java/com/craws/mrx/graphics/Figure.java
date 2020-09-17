@@ -16,7 +16,7 @@ public class Figure extends Render {
     private boolean travelling = false;
 
     public Figure(final Context context, final Player player) {
-        super(BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.player_sprites), 1, 6, 0f, 0f);
+        super(BitmapFactory.decodeResource(context.getResources(), com.craws.mrx.R.drawable.player_sprites), 2, 6, 0f, 0f);
         this.player = player;
 
         resize((int) (getWidth() * GameView.FIGURE_SCALE_FACTOR), (int) (getHeight() * GameView.FIGURE_SCALE_FACTOR));
