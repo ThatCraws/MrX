@@ -1,6 +1,7 @@
 package com.craws.mrx;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,6 +15,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.craws.mrx.state.Ticket;
 import com.craws.mrx.state.Timeline;
 import com.craws.mrx.state.Vehicle;
+
+import java.util.Vector;
 
 public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHolder> {
 
@@ -35,17 +38,26 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
     }
 
     private Timeline tl;
+    private Vector<ViewHolder> items;
 
     public TimelineAdapter(final Timeline tl) {
         this.tl = tl;
+        this.items = new Vector<>();
     }
 
     @Override
     public @NonNull TimelineAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         Context context = parent.getContext();
         LayoutInflater inflater = LayoutInflater.from(context);
+        ViewHolder holder = new ViewHolder(inflater.inflate(R.layout.timeline_layout, parent, false));
 
-        return new ViewHolder(inflater.inflate(R.layout.timeline_layout, parent, false));
+        items.add(holder);
+        Log.d("timelineViewHolderAdded", "Number " + items.size() + ": " + holder.toString());
+        Log.d("timelineViewHolderAdded", "Adapter pos: " + holder.getAdapterPosition());
+        Log.d("timelineViewHolderAdded", "Layout pos: " + holder.getLayoutPosition());
+        Log.d("timelineViewHolderAdded", "Item id: " + holder.getItemId());
+
+        return holder;
     }
 
     @Override
@@ -86,10 +98,18 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
             default:
                 holder.img_Vehicle.setImageResource(R.drawable.error);
         }
+        Log.d("timelineViewHolderBound", holder.toString());
+        Log.d("timelineViewHolderBound", "Adapter pos: " + holder.getAdapterPosition());
+        Log.d("timelineViewHolderBound", "Layout pos: " + holder.getLayoutPosition());
+        Log.d("timelineViewHolderBound", "Item id: " + holder.getItemId());
     }
 
     @Override
     public int getItemCount() {
         return tl.size();
+    }
+
+    public void markItem(final int index, @ColorInt final int color) {
+        items.get(index).setBackgroundColor(color);
     }
 }

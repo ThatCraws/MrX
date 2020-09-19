@@ -2,6 +2,8 @@ package com.craws.mrx;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.selection.SelectionPredicates;
 import androidx.recyclerview.selection.SelectionTracker;
 import androidx.recyclerview.selection.StorageStrategy;
@@ -10,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
@@ -37,9 +40,8 @@ public class GameActivity extends AppCompatActivity {
     private TimelineAdapter adapterTL;
     private int currColorIndex;
 
-    private boolean menusHidden;
-
     private TextView txtInstructions;
+    FragmentInterrupted fragmentInterrupted;
 
     // The displayed inventory in the RecyclerView. Will have to be built every time player's change.
     private Vector<Ticket> activeInventory;
@@ -51,6 +53,8 @@ public class GameActivity extends AppCompatActivity {
         setContentView(R.layout.activity_game);
 
         gameView = findViewById(R.id.gameView);
+
+        relativeLayoutInventory = findViewById(R.id.relLayout_inventory);
 
         txtInstructions = findViewById(R.id.textView_instruction);
 
@@ -79,7 +83,7 @@ public class GameActivity extends AppCompatActivity {
                 for(long currSelection : tracker.getSelection()) {
                     selectedTickets.add(adapterInv.getTicketById(currSelection));
                 }
-                System.out.println(selectedTickets);
+                Log.d("SelectionChanged", selectedTickets.toString());
                 gameView.setSelectedTickets(selectedTickets);
             }
         });
@@ -119,21 +123,14 @@ public class GameActivity extends AppCompatActivity {
         recTimeline.setAdapter(adapterTL);
         recTimeline.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
 
-        menusHidden = false;
-
-
         // To manage the game, we listen for phase changes
+        fragmentInterrupted = new FragmentInterrupted(); // "Cutscenes". Used to block view from Detective-user when they pass the device to the Chad Mr. X
         gameView.setOnPhaseChangeListener((phase) -> {
+
             if (phase == GameView.GAME_PHASE.INTERRUPTED) {
-                if(!menusHidden) {
-                    hideMenus();
-                    menusHidden = true;
-                }
+                startInterrupted();
             } else {
-                if(menusHidden) {
-                    showMenus();
-                    menusHidden = false;
-                }
+                stopInterrupted();
             }
 
             setUserInstruction(phase);
@@ -176,30 +173,8 @@ public class GameActivity extends AppCompatActivity {
        gameLoopThread.start();
     }
 
-    public void hideMenus() {
-        runOnUiThread(() -> {
-            relativeLayoutInventory = findViewById(R.id.relLayout_inventory);
-            recTimeline = findViewById(R.id.recycle_timeline);
-
-            if(relativeLayoutInventory != null && recTimeline != null) {
-                relativeLayoutInventory.setVisibility(View.GONE);
-                recTimeline.setVisibility(View.GONE);
-            }
-        });
-    }
-
-    public void showMenus() {
-        runOnUiThread(() -> {
-            relativeLayoutInventory = findViewById(R.id.relLayout_inventory);
-            recTimeline = findViewById(R.id.recycle_timeline);
-
-            if(relativeLayoutInventory != null && recTimeline != null) {
-                relativeLayoutInventory.setVisibility(View.VISIBLE);
-                recTimeline.setVisibility(View.VISIBLE);
-            }
-        });
-    }
-
+    // --------======== LISTENER HELPER ========--------
+                // -------- INVENTORY --------
     private void activeInventoryAdd(final Ticket toAdd) {
         // RecyclerView may only be changed by the Thread that created it
         runOnUiThread(() -> {
@@ -239,6 +214,7 @@ public class GameActivity extends AppCompatActivity {
         });
     }
 
+                // -------- TIMELINE --------
     private void timelineAdd(final Ticket ticket, final Place place) {
         runOnUiThread(() -> {
             int nextIndex = timeline.size();
@@ -249,18 +225,25 @@ public class GameActivity extends AppCompatActivity {
 
     private void markTurn(final int round) {
         runOnUiThread(() -> {
-            TimelineAdapter.ViewHolder viewHolder = (TimelineAdapter.ViewHolder) recTimeline.findViewHolderForLayoutPosition(round);
-            if (viewHolder != null) {
-                viewHolder.setBackgroundColor(GameView.markColorCoding[currColorIndex++]);
-                if (currColorIndex >= GameView.markColorCoding.length) {
-                    currColorIndex = 0;
+            RecyclerView.LayoutManager layoutManager = recTimeline.getLayoutManager();
+
+            if(layoutManager != null) {
+                View view = recTimeline.getLayoutManager().findViewByPosition(round);
+                if (view != null) {
+                    view.setBackgroundColor(GameView.markColorCoding[currColorIndex++]);
+                } else {
+                    Log.d("DetSpecialActivity", "It happened... ViewByPosition not found. :really_sad_face:");
                 }
             } else {
-                System.out.println("NOoooOOOOOOoooooOooOOoooOoOo");
+                Log.d("DetSpecialActivity", "It happened... LayoutManager not found. Da actual fuck.");
             }
+
+            adapterTL.markItem(round, GameView.markColorCoding[currColorIndex++]);
         });
     }
 
+                // -------- PHASE-MANAGEMENT --------
+    String lastHelpText = "";
     public void setUserInstruction(final GameView.GAME_PHASE phase) {
         String helpText = "";
         switch (phase) {
@@ -348,24 +331,72 @@ public class GameActivity extends AppCompatActivity {
             case DET_SPECIAL_DO:
                 helpText = "Placeholder DET_SPECIAL_DO";
                 break;
-            case DET_THROWING_SELECTED_TICKETS:
-                helpText = "Placeholder DET_THROWING_SELECTED_TICKETS";
-                break;
             case DET_WIN_CHECK:
                 helpText = "Placeholder DET_WIN_CHECK";
                 break;
             case DET_WON:
                 helpText = "Placeholder DET_WON";
                 break;
-
+            case MRX_THROWING_SELECTED_TICKETS:
+            case DET_THROWING_SELECTED_TICKETS:
+                helpText = "Turn over. Wanna see your inventory?";
+                break;
+            case MRX_DET_TRANSITION:
+            case DET_MRX_TRANSITION:
+                helpText = "";
+                break;
+            case WAIT_FOR_CLICK:
             case MRX_SPECIAL: // Just throw the needed tickets, user won't see this. leave the previous message
             case MRX_EXTRA_TURN:
-            case MRX_THROWING_SELECTED_TICKETS:
+                helpText = lastHelpText;
+                break;
             default:
         }
+        lastHelpText = helpText;
         final String toSet = helpText;
         runOnUiThread(() -> txtInstructions.setText(toSet));
     }
+
+    public void stopInterrupted() {
+
+        runOnUiThread(() -> {
+            if(relativeLayoutInventory != null) {
+                if (relativeLayoutInventory.getVisibility() == View.GONE) {
+                    relativeLayoutInventory.setVisibility(View.VISIBLE);
+                }
+            }
+
+            if(fragmentInterrupted.isVisible()) {
+                final FragmentManager fm = getSupportFragmentManager();
+                FragmentTransaction transaction = fm.beginTransaction();
+                transaction.remove(fragmentInterrupted);
+                transaction.commit();
+            }
+        });
+    }
+
+    public void startInterrupted() {
+
+        runOnUiThread(() -> {
+            if(relativeLayoutInventory != null) {
+                if (relativeLayoutInventory.getVisibility() == View.VISIBLE) {
+                    relativeLayoutInventory.setVisibility(View.GONE);
+                }
+            }
+
+            if(!fragmentInterrupted.isVisible()) {
+                final FragmentManager fm = getSupportFragmentManager();
+                FragmentTransaction transaction = fm.beginTransaction();
+                transaction.replace(R.id.activity_frame_interrupted, fragmentInterrupted);
+                transaction.commitNow();
+                fragmentInterrupted.setText(gameView.getUserMessage());
+            }
+            gameView.setContinuable(true);
+        });
+    }
+
+
+    //--------======== INHERITED METHODS ========--------
 
     @Override
     protected void onPause() {

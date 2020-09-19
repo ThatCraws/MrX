@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -42,8 +43,9 @@ public class GameView extends SurfaceView {
     private boolean continuable;
 
     public enum GAME_PHASE {
-        UNINITIALIZED,
-        INTERRUPTED,                        // No functionality of the game is given (mainly to display messages to human player)
+        DET_MRX_TRANSITION,                 // besides managing the transition from Detectives' turn to Mr. X's, it is the start state
+        INTERRUPTED,                        // Displaying message to user and waiting for click (start via ShowMessageAndWaitForClick())
+        WAIT_FOR_CLICK,                     // Just waiting for click (start via waitForClick())
 
         // ----------------- MR. X -----------------
         MRX_NO_VALID_MOVE,
@@ -73,6 +75,8 @@ public class GameView extends SurfaceView {
         MRX_WIN_CHECK,                      // Position check after Mr. X turn (he can't make himself lose). Make Mr. X disappear for detective's turn.
         MRX_THROW_TICKETS,                  // Mr. X can throw as many tickets as he wants and then restock to 8 Tickets. (this phase is just for the player to select the tickets(
         MRX_THROWING_SELECTED_TICKETS,      // Actually throws away the selected tickets and restocks back to 8
+
+        MRX_DET_TRANSITION,
 
         // ----------------- DETECTIVES -----------------
         DET_NO_VALID_MOVE,
@@ -127,6 +131,7 @@ public class GameView extends SurfaceView {
     City toTravelTo;
     Vector<Ticket> toUseForTravel;
 
+    private boolean showMrX; // MrX is hidden in detectives' turn
 
     // ----------- graphics -----------
     private SurfaceHolder surfaceHolder;
@@ -211,8 +216,8 @@ public class GameView extends SurfaceView {
 
     private void setupGame() {
         // ---=== The game-state to display ==---
-        currPhase = GAME_PHASE.UNINITIALIZED;
-        nextPhase = GAME_PHASE.UNINITIALIZED;
+        currPhase = GAME_PHASE.DET_MRX_TRANSITION;
+        nextPhase = GAME_PHASE.DET_MRX_TRANSITION;
         continuable = true;
 
         // for the map
@@ -249,7 +254,10 @@ public class GameView extends SurfaceView {
         Place pl_kaffstadt = gameState.buildPlace("Kaffster", false, 600, 475);
         Place pl_berlin = gameState.buildPlace("Berlin", false, 550, 300);
 
-        Place pl_forgotten_island = gameState.buildPlace("Nowheresville", false, 700, 350);
+        Place pl_forgotten_island = gameState.buildPlace("Nowheresville", false, 750, 350);
+        Place pl_sylt = gameState.buildPlace("Sylt", false, 1000, 100);
+        Place pl_newYork = gameState.buildPlace("New York", false, 1250, 500);
+        Place pl_washington = gameState.buildPlace("Washington", false, 1100, 750);
 
         gameState.buildStreet(pl_pig, pl_bremen, Vehicle.FAST);
         gameState.buildStreet(pl_pig, pl_hanno, Vehicle.MEDIUM);
@@ -258,6 +266,12 @@ public class GameView extends SurfaceView {
         gameState.buildStreet(pl_berlin, pl_kaffstadt, Vehicle.FAST);
         gameState.buildStreet(pl_kiel, pl_bremen, Vehicle.FAST);
         gameState.buildStreet(pl_kiel, pl_berlin, Vehicle.FAST);
+
+        gameState.buildStreet(pl_forgotten_island, pl_sylt, Vehicle.FAST);
+        gameState.buildStreet(pl_forgotten_island, pl_newYork, Vehicle.MEDIUM);
+        gameState.buildStreet(pl_forgotten_island, pl_washington, Vehicle.SLOW);
+        gameState.buildStreet(pl_sylt, pl_newYork, Vehicle.MEDIUM);
+        gameState.buildStreet(pl_newYork, pl_washington, Vehicle.FAST);
 
         int det = gameState.addDetective("Detestive", pl_hanno);
         int detTwo = gameState.addDetective("Numero dos", pl_kiel);
@@ -288,7 +302,6 @@ public class GameView extends SurfaceView {
 
     // These are directly bound to the game loop so they are here and not with the other class-members
     private boolean firstPhaseIteration = true;
-    private boolean showMrX;
     private Player currDetective;
     private int extraTurnCounter = 1;
     private int abilityPower;
@@ -302,7 +315,11 @@ public class GameView extends SurfaceView {
             Figure selectedFigureRightNow = selectedFigure;
 
             switch (currPhase) {
-                case UNINITIALIZED:
+                case DET_MRX_TRANSITION:
+
+                    showMessageAndWaitForClick("Mr. X's turn. Detectives don't look.", GAME_PHASE.MRX_CHOOSE_TURN);
+                    break;
+
                 case MRX_CHOOSE_TURN: { // ----===== Mr. X's turn starts =====-----
                     if (firstPhaseIteration) {
 
@@ -310,12 +327,8 @@ public class GameView extends SurfaceView {
                             inventoryChangeListener.onNewInventory(gameState.getInventoryX());
                         }
 
-                        showMessageAndWaitForClick("Mr. X's turn. Detectives don't look.", GAME_PHASE.MRX_CHOOSE_TURN);
-
                         firstPhaseIteration = false;
                         showMrX = true;
-                        // Let the GAME_PHASE.INTERRUPTED begin
-                        break;
                     }
 
                     if (!hasValidMove(gameState.getMrX())) {
@@ -570,7 +583,7 @@ public class GameView extends SurfaceView {
 
                         if (extraTurnCounter++ >= 2) {
                             changePhase(GAME_PHASE.MRX_WIN_CHECK);
-                            extraTurnCounter = 0;
+                            extraTurnCounter = 1;
                         } else {
                             changePhase(GAME_PHASE.MRX_EXTRA_TURN_CHOOSE_TURN);
                         }
@@ -581,11 +594,6 @@ public class GameView extends SurfaceView {
                 case MRX_EXTRA_TURN_NOT_POSSIBLE:
                 case MRX_EXTRA_TURN_ONE_NOT_POSSIBLE:
                 case DET_EXTRA_TURN_NOT_POSSIBLE: {
-                    try {
-                        Thread.sleep(4000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
 
                     switch (currPhase) {
                         case MRX_EXTRA_TURN_NOT_POSSIBLE:
@@ -645,10 +653,10 @@ public class GameView extends SurfaceView {
 
                 case MRX_WIN_CHECK: {
                     if (gameState.isGameLost()) {
-                        System.out.println("Mr. X won! Yay");
+                        Log.d("win-check_mrx", "Mr. X won");
                         changePhase(GAME_PHASE.MRX_WON);
                     } else {
-                        System.out.println("Mr. X didn't win =(");
+                        Log.d("win-check_mrx", "Mr. X did not win =(");
                     }
                     changePhase(GAME_PHASE.MRX_THROW_TICKETS);
                     break;
@@ -656,6 +664,7 @@ public class GameView extends SurfaceView {
 
                 case MRX_THROW_TICKETS:
                 case DET_THROW_TICKETS: {
+                    // Just let the CPU relax a bit
                     try {
                         Thread.sleep(200);
                     } catch (InterruptedException e) {
@@ -698,28 +707,21 @@ public class GameView extends SurfaceView {
                         gameState.giveTicket(0, toGive);
                     }
 
-                    // let user take a look at his new tickets and the marvelous animation of removing and adding tickets to/from inventory
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-
                     firstPhaseIteration = true;
 
-                    changePhase(GAME_PHASE.DET_CHOOSE_MOVE);
+                    // let user take a look at his new tickets and the marvelous animation of removing and adding tickets to/from inventory
+                    waitForClick(GAME_PHASE.MRX_DET_TRANSITION);
 
                     break;
                 }
 
-                case MRX_NO_VALID_MOVE: {
-                    try {
-                        Thread.sleep(4000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                case MRX_DET_TRANSITION: {
+                    showMessageAndWaitForClick("Detectives' turn", GAME_PHASE.DET_CHOOSE_MOVE);
+                    break;
+                }
 
-                    changePhase(GAME_PHASE.MRX_NO_VALID_MOVE_CHOOSE_TURN);
+                case MRX_NO_VALID_MOVE: {
+                    waitForClick(GAME_PHASE.MRX_NO_VALID_MOVE_CHOOSE_TURN);
                     break;
                 }
 
@@ -772,16 +774,19 @@ public class GameView extends SurfaceView {
                 case DET_CHOOSE_MOVE: {
 
                     if (firstPhaseIteration) {
-                        showMessageAndWaitForClick("Detectives' turn", GAME_PHASE.DET_CHOOSE_MOVE);
+
                         if (inventoryChangeListener != null) {
                             inventoryChangeListener.onNewInventory(gameState.getInventory());
                         }
                         currDetective = gameState.getDetectives().get(0);
 
                         firstPhaseIteration = false;
+
                         break;
                     }
-                    showMrX = false;
+                    if(showMrX) { // So Mr. X does not disappear before the showMessageAndWaitForClick()-box is there
+                        showMrX = false;
+                    }
 
                     if (!hasValidMove(currDetective)) {
                         changePhase(GAME_PHASE.DET_NO_VALID_MOVE);
@@ -921,18 +926,20 @@ public class GameView extends SurfaceView {
 
                 case DET_SPECIAL_DO: {
 
-                    // Starting positions are marked on turn/index 0. When reaching this point Mr. X already did his move this round.
-                    // The second time the detectives can activate their ability for example timeline.size() will be 3 (start, first move and second move of Mr. X)
-                    int currRound = gameState.getTimeline().size() - 1; // index/round
+                    int currRound = gameState.getTimeline().size() - 1; // round (counting start positions, so after first move of Mr. X, it's 2)
 
                     // if 3 tickets are used, mark position 4 moves before the current position, for 4 tickets 3 before, for 5 tickets 2 before
-                    int roundToMark = Math.max(currRound - (4 - abilityPower), 0);
+                    int indexToMark = Math.max(currRound - (4 - abilityPower), 1);
+
+                    Log.d("DetSpecial", "Timeline size: " + gameState.getTimeline().size());
+                    Log.d("DetSpecial", "Ability power: " + abilityPower);
+                    Log.d("DetSpecial", "Index: " + indexToMark);
 
                     if (timelineChangeListener != null) {
-                        timelineChangeListener.onTurnMarked(roundToMark);
+                        timelineChangeListener.onTurnMarked(indexToMark); // 1: current round, 2: last round, ..., timeline.size: start-position
                     }
 
-                    markedCities.add(gameState.getTimeline().getPlaceForRound(roundToMark).getCity());
+                    markedCities.add(gameState.getTimeline().getPlaceForRound(indexToMark).getCity());
 
                     changePhase(GAME_PHASE.DET_THROW_TICKETS);
                     break;
@@ -1099,30 +1106,19 @@ public class GameView extends SurfaceView {
                     firstPhaseIteration = true;
 
                     // let user take a look at his new tickets and the marvelous animation of removing and adding tickets to/from inventory
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-
-                    changePhase(GAME_PHASE.MRX_CHOOSE_TURN);
+                    waitForClick(GAME_PHASE.DET_MRX_TRANSITION);
 
                     break;
                 }
 
                 case DET_NO_VALID_MOVE: {
-                    try {
-                        Thread.sleep(4000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
 
                     if (currDetective.getPort() == gameState.getDetectives().lastElement().getPort()) { // avoiding equals here
-                        changePhase(GAME_PHASE.DET_SELECT_NEXT);
+                        waitForClick(GAME_PHASE.DET_SELECT_NEXT);
                     } else {
                         int detIndex = gameState.getDetectives().indexOf(currDetective);
                         currDetective = gameState.getDetectives().get(detIndex + 1);
-                        changePhase(GAME_PHASE.DET_CHOOSE_MOVE);
+                        waitForClick(GAME_PHASE.DET_CHOOSE_MOVE);
                     }
 
                     break;
@@ -1131,12 +1127,8 @@ public class GameView extends SurfaceView {
                 case MRX_WON:
                 case DET_WON: {
                     showMrX = true;
-                    try {
-                        Thread.sleep(5000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    changePhase(GAME_PHASE.GAME_OVER);
+                    waitForClick(GAME_PHASE.GAME_OVER);
+                    break;
                 }
 
                 default:
@@ -1415,13 +1407,17 @@ public class GameView extends SurfaceView {
     @Override
     public boolean onTouchEvent(MotionEvent e) {
         // If a user message is displayed
-        if (currPhase == GAME_PHASE.INTERRUPTED) {
+        if (currPhase == GAME_PHASE.INTERRUPTED || currPhase == GAME_PHASE.WAIT_FOR_CLICK) {
             // When the text is fully displayed and the user is allowed to continue
             if (continuable) {
-                changePhase(nextPhase);
-                nextPhase = null;
-                currAlpha = 0;
-                return true;
+                synchronized (this) {
+                    Log.d("waitForClicks", "Before: " + currPhase);
+                    Log.d("waitForClicks", "After: " + nextPhase);
+                    changePhase(nextPhase);
+                    nextPhase = null;
+                    currAlpha = 0;
+                    return false;
+                }
             }
         } else {
 
@@ -1559,13 +1555,6 @@ public class GameView extends SurfaceView {
                 canvas.drawLine(startX, startY, targetX, targetY, paint);
             }
 
-            paint.setColor(prevColor);
-
-            // Draw Cities
-            for (int i = 0; i < gameState.getPlaces().size(); i++) {
-                gameState.getPlaces().get(i).getCity().draw(canvas, paint);
-            }
-
             // Draw marking of marked cities
             for (int i = 0; i < markedCities.size(); i++) {
                 City city = markedCities.get(i);
@@ -1579,6 +1568,12 @@ public class GameView extends SurfaceView {
                 paint.setColor(Color.WHITE);
                 canvas.drawOval(city.getX(), city.getY(), city.getX() + city.getWidth(), city.getY() + city.getHeight(), paint);
             }
+            paint.setColor(prevColor);
+
+            // Draw Cities
+            for (int i = 0; i < gameState.getPlaces().size(); i++) {
+                gameState.getPlaces().get(i).getCity().draw(canvas, paint);
+            }
 
             // Draw detective Figures
             for (Player toDraw : gameState.getDetectives()) {
@@ -1589,39 +1584,6 @@ public class GameView extends SurfaceView {
                 if (gameState.getMrX() != null) {
                     gameState.getMrX().getFigure().draw(canvas, paint);
                 }
-            }
-
-            // BLACK SCREEN FOR USER MESSAGES (and censoring between rounds)
-            // Draw on top of the map, not instead of (like I did before)
-            if (currPhase == GAME_PHASE.INTERRUPTED) {
-                canvas.translate(-viewPortX, -viewPortY);
-                canvas.scale(1 / mapScaleFactor, 1 / mapScaleFactor);
-
-                final int increment = 10;
-                if (currAlpha + increment < 255) {
-                    paint.setColor(Color.BLACK);
-                    paint.setAlpha(currAlpha);
-                    canvas.drawRect(0f, 0f, mapWidth, mapHeight, paint);
-                    currAlpha += increment;
-                } else {
-                    // paint it, black
-                    canvas.drawColor(Color.BLACK);
-
-                    // set color to white
-                    paint.setColor(Color.WHITE);
-                    Paint smallerTxtPaint = new Paint(paint);
-                    smallerTxtPaint.setTextSize(DEFAULT_TXT_SIZE * 2 / 3);
-                    smallerTxtPaint.setAlpha(255 / 3 * 2);
-
-                    // text in white
-                    canvas.drawText(userMessage, getWidth() / 2f, getHeight() / 2f, paint); // TODO: why is getWidth() unreliable? (It sometimes only gets the width without the menus, even though they are gone since quite some time once we get here)
-                    canvas.drawText("- Touch to continue -", getWidth() / 2f, getHeight() - 75, smallerTxtPaint);
-                    // reset color
-                    paint.setColor(prevColor);
-
-                    continuable = true;
-                }
-                paint.setAlpha(255);
             }
 
             // --- Map (Debug/Testing, unfinished) ---
@@ -1656,15 +1618,24 @@ public class GameView extends SurfaceView {
      * @param message The message to show the player until he touches the screen.
      */
     public void showMessageAndWaitForClick(final String message, final GAME_PHASE phaseAfter) {
-        changePhase(GAME_PHASE.INTERRUPTED);
+        changePhase(GAME_PHASE.INTERRUPTED, phaseAfter);
         continuable = false;
 
         userMessage = message;
-        nextPhase = phaseAfter;
     }
 
-    public void changePhase(final GAME_PHASE phase) {
+    public void waitForClick(final GAME_PHASE phaseAfter) {
+        changePhase(GAME_PHASE.WAIT_FOR_CLICK, phaseAfter);
+        continuable = true;
+    }
+
+    public synchronized void changePhase(final GAME_PHASE phase, final GAME_PHASE phaseAfter) {
+        changePhase(phase);
+        nextPhase = phaseAfter;
+    }
+    public synchronized void changePhase(final GAME_PHASE phase) { // TODO Test if I resolved phase getting null'ed in TouchEventListener by synchronizing the currPhase == Interrupted || Wait_For_Click
         currPhase = phase;
+        Log.d("PhaseChange", currPhase.toString());
         if(phaseChangeListener != null) {
             phaseChangeListener.onPhaseChange(phase);
         }
@@ -1674,6 +1645,14 @@ public class GameView extends SurfaceView {
 
     public GameState getGameState() {
         return gameState;
+    }
+
+    public String getUserMessage() {
+        return userMessage;
+    }
+
+    public void setContinuable(boolean continuable) {
+        this.continuable = continuable;
     }
 
     public void setOnPhaseChangeListener(final OnPhaseChangeListener listener) {
