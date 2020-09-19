@@ -1002,6 +1002,7 @@ public class GameView extends SurfaceView {
                     gameState.activateAbility(currDetective.getPort(), toUseForTravel, Ability.EXTRA_TURN);
 
                     changePhase(GAME_PHASE.DET_EXTRA_TURN_CHOOSE_TURN);
+                    break; // For the sake of the gameLoop-mechanics break here even though we will end up in DET_EXTRA_TURN_CHOOSE_TURN anyway
 
                 }
 
@@ -1027,6 +1028,8 @@ public class GameView extends SurfaceView {
                             changePhase(GAME_PHASE.DET_EXTRA_TURN_CONFIRM);
                         }
                     }
+
+                    break;
                 }
 
                 case DET_EXTRA_TURN_CONFIRM: {
@@ -1055,6 +1058,8 @@ public class GameView extends SurfaceView {
 
                     gameState.doFreeMove(toTravel.getPlayer().getPort(), toTravelTo.getPlace());
 
+                    toTravel.deselect();
+
                     // Check win-condition right after detective moved (waiting until all detectives have moved would be really weird for the player
                     changePhase(GAME_PHASE.DET_EXTRA_TURN_WIN_CHECK);
                     break;
@@ -1063,9 +1068,9 @@ public class GameView extends SurfaceView {
                 case DET_EXTRA_TURN_WIN_CHECK: {
                     if (gameState.isGameWon()) {
                         changePhase(GAME_PHASE.DET_WON);
-                        break;
+                    } else {
+                        changePhase(GAME_PHASE.DET_THROW_TICKETS);
                     }
-                    changePhase(GAME_PHASE.DET_THROW_TICKETS);
                     break;
                 }
 
@@ -1426,43 +1431,23 @@ public class GameView extends SurfaceView {
 
             if (e.getAction() == MotionEvent.ACTION_UP) {
                 if (!scrolling && !scaling) {
-                    boolean madeCitySelection = false;
-                    for (int i = 0; i < gameState.getPlaces().size(); i++) {
-                        Place place = gameState.getPlaces().get(i);
-                        // If a city was clicked
-                        if (place.getCity().collisionCheck((e.getX() + (-viewPortX)) * (1 / mapScaleFactor), (e.getY() + (-viewPortY)) * (1 / mapScaleFactor))) {
-                            // If a city was already selected deselect it first
-                            if (selectedCity != null) {
-                                selectedCity.deselect();
-                            }
 
-                            // If clicked on the already selected city
-                            if (place.getCity().equals(selectedCity)) {
-                                selectedCity = null;
-                                // If clicked on a different city
-                            } else {
-                                selectedCity = place.getCity();
-                                selectedCity.select();
-                            }
-                            madeCitySelection = true;
-                        }
-                    }
-
-
-                    // same thing for players, but they may only be selected for the extra turn ability
+                    // When the extra turn ability of the detectives is activated we want to be able to select figures
                     boolean madeFigureSelection = false;
-                    if (currPhase == GAME_PHASE.DET_EXTRA_TURN_CHOOSE_TURN || currPhase == GAME_PHASE.DET_EXTRA_TURN_CONFIRM) {
+                    if (currPhase == GAME_PHASE.DET_EXTRA_TURN_CHOOSE_TURN || currPhase == GAME_PHASE.DET_EXTRA_TURN_CONFIRM) { // These phases require figure-selection to be possible
 
                         for (int i = 0; i < gameState.getDetectives().size(); i++) {
                             Player player = gameState.getDetectives().get(i);
 
                             if (player.getFigure().collisionCheck((e.getX() + (-viewPortX)) * (1 / mapScaleFactor), (e.getY() + (-viewPortY)) * (1 / mapScaleFactor))) {
+                                // If there was already a figure selected, undo the selected-animation first
                                 if (selectedFigure != null) {
                                     selectedFigure.deselect();
                                 }
+                                // If clicked on already selected figure, deselect it
                                 if (player.getFigure().equals(selectedFigure)) {
                                     selectedFigure = null;
-                                    // If clicked on a different city
+                                    // If clicked on a different figure, select that one
                                 } else {
                                     selectedFigure = player.getFigure();
                                     selectedFigure.select();
@@ -1472,7 +1457,32 @@ public class GameView extends SurfaceView {
                         }
                     }
 
-                    // If no place or figure at all was clicked/the background was clicked, deselect city and figure
+                    // Same thing for cities, but they can be selected in every phase (well except while interrupted and wait_for_click)
+                    boolean madeCitySelection = false;
+                    if(!madeFigureSelection) { // So user can't accidentally click a city when selecting a figure
+                        for (int i = 0; i < gameState.getPlaces().size(); i++) {
+                            Place place = gameState.getPlaces().get(i);
+                            // If a city was clicked
+                            if (place.getCity().collisionCheck((e.getX() + (-viewPortX)) * (1 / mapScaleFactor), (e.getY() + (-viewPortY)) * (1 / mapScaleFactor))) {
+                                // If a city was already selected deselect it first
+                                if (selectedCity != null) {
+                                    selectedCity.deselect();
+                                }
+
+                                // If clicked on the already selected city
+                                if (place.getCity().equals(selectedCity)) {
+                                    selectedCity = null;
+                                    // If clicked on a different city
+                                } else {
+                                    selectedCity = place.getCity();
+                                    selectedCity.select();
+                                }
+                                madeCitySelection = true;
+                            }
+                        }
+                    }
+
+                    // If no place or figure was clicked/the background was clicked, deselect city and figure
                     if (!madeCitySelection && !madeFigureSelection) {
                         if (selectedCity != null) {
                             selectedCity.deselect();
@@ -1633,7 +1643,7 @@ public class GameView extends SurfaceView {
         changePhase(phase);
         nextPhase = phaseAfter;
     }
-    public synchronized void changePhase(final GAME_PHASE phase) { // TODO Test if I resolved phase getting null'ed in TouchEventListener by synchronizing the currPhase == Interrupted || Wait_For_Click
+    public synchronized void changePhase(final GAME_PHASE phase) {
         currPhase = phase;
         Log.d("PhaseChange", currPhase.toString());
         if(phaseChangeListener != null) {

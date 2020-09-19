@@ -357,6 +357,29 @@ public class GameActivity extends AppCompatActivity {
         runOnUiThread(() -> txtInstructions.setText(toSet));
     }
 
+
+    public void startInterrupted() {
+
+        runOnUiThread(() -> {
+            if(!fragmentInterrupted.isVisible()) {
+                final FragmentManager fm = getSupportFragmentManager();
+                FragmentTransaction transaction = fm.beginTransaction();
+                transaction.replace(R.id.activity_frame_interrupted, fragmentInterrupted);
+                transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
+                transaction.commitNow();
+                fragmentInterrupted.setText(gameView.getUserMessage());
+            }
+
+            if(relativeLayoutInventory != null) {
+                if (relativeLayoutInventory.getVisibility() == View.VISIBLE) {
+                    relativeLayoutInventory.setVisibility(View.GONE);
+                }
+            }
+
+            gameView.setContinuable(true);
+        });
+    }
+
     public void stopInterrupted() {
 
         runOnUiThread(() -> {
@@ -370,31 +393,11 @@ public class GameActivity extends AppCompatActivity {
                 final FragmentManager fm = getSupportFragmentManager();
                 FragmentTransaction transaction = fm.beginTransaction();
                 transaction.remove(fragmentInterrupted);
+                transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
                 transaction.commit();
             }
         });
     }
-
-    public void startInterrupted() {
-
-        runOnUiThread(() -> {
-            if(relativeLayoutInventory != null) {
-                if (relativeLayoutInventory.getVisibility() == View.VISIBLE) {
-                    relativeLayoutInventory.setVisibility(View.GONE);
-                }
-            }
-
-            if(!fragmentInterrupted.isVisible()) {
-                final FragmentManager fm = getSupportFragmentManager();
-                FragmentTransaction transaction = fm.beginTransaction();
-                transaction.replace(R.id.activity_frame_interrupted, fragmentInterrupted);
-                transaction.commitNow();
-                fragmentInterrupted.setText(gameView.getUserMessage());
-            }
-            gameView.setContinuable(true);
-        });
-    }
-
 
     //--------======== INHERITED METHODS ========--------
 
