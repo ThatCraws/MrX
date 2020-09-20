@@ -17,7 +17,6 @@ import androidx.annotation.ColorInt;
 
 import com.craws.mrx.graphics.City;
 import com.craws.mrx.graphics.Figure;
-import com.craws.mrx.graphics.Render;
 import com.craws.mrx.state.Ability;
 import com.craws.mrx.state.GameState;
 import com.craws.mrx.state.Place;
@@ -26,7 +25,6 @@ import com.craws.mrx.state.Ticket;
 import com.craws.mrx.state.Vehicle;
 import com.craws.tree.Edge;
 
-import java.util.Stack;
 import java.util.Vector;
 
 
@@ -43,6 +41,11 @@ public class GameView extends SurfaceView {
     private boolean continuable;
 
     public enum GAME_PHASE {
+        BUILD_WORLD,
+        BUILD_WORLD_CITY_SELECTED,
+        BUILD_WORLD_WAIT_FOR_CITY_TWO,
+        BUILD_WORLD_STREET_BUILD_CONFIRM,
+
         DET_MRX_TRANSITION,                 // besides managing the transition from Detectives' turn to Mr. X's, it is the start state
         INTERRUPTED,                        // Displaying message to user and waiting for click (start via ShowMessageAndWaitForClick())
         WAIT_FOR_CLICK,                     // Just waiting for click (start via waitForClick())
@@ -62,7 +65,7 @@ public class GameView extends SurfaceView {
         MRX_EXTRA_TURN_MOVE,
         MRX_EXTRA_TURN_NOT_POSSIBLE,
         MRX_EXTRA_TURN_ONE_NOT_POSSIBLE,    // This means the ability was successfully activated, but the user tried to move to a place with his first turn, from where he
-        // couldn't do his second move (because he is going to a place that only has streets which require tickets not in his inventory)
+                                            // couldn't do his second move (because he is going to a place that only has streets which require tickets not in his inventory)
 
         MRX_SPECIAL,                        // The usage of the ability has been confirmed. Prepare.
         MRX_SPECIAL_CHOOSE_CITY,
@@ -136,7 +139,6 @@ public class GameView extends SurfaceView {
     // ----------- graphics -----------
     private SurfaceHolder surfaceHolder;
     private Canvas canvas;
-    private Stack<Render> renderStack;
     private Paint paint;
     // These colors will be used to mark the cities (when the detectives' special ability to mark Mr. X's position a few rounds ago is activated) //
     // and the the associated position in the timeline.
@@ -238,47 +240,13 @@ public class GameView extends SurfaceView {
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setStrokeWidth(20f);
 
-        renderStack = new Stack<>();
-
         // When the screen gets resized re-set the Places/Cities
         surfaceHolder.addCallback(new GameViewListener());
 
         //update viewport
         dstViewport.set(0f, 0f, (float) getWidth(), (float) getHeight());
 
-        Place pl_kiel = gameState.buildPlace("Kiel", false, 450, 125);
-        Place pl_bremen = gameState.buildPlace("Bremen", false, 100, 200);
-        Place pl_hanno = gameState.buildPlace("Hannover", false, 200, 550);
-        Place pl_pig = gameState.buildPlace("Pig", false, 400, 400);
-        Place pl_murica = gameState.buildPlace("Murica", true, 500, 600);
-        Place pl_kaffstadt = gameState.buildPlace("Kaffster", false, 600, 475);
-        Place pl_berlin = gameState.buildPlace("Berlin", false, 550, 300);
 
-        Place pl_forgotten_island = gameState.buildPlace("Nowheresville", false, 750, 350);
-        Place pl_sylt = gameState.buildPlace("Sylt", false, 1000, 100);
-        Place pl_newYork = gameState.buildPlace("New York", false, 1250, 500);
-        Place pl_washington = gameState.buildPlace("Washington", false, 1100, 750);
-
-        gameState.buildStreet(pl_pig, pl_bremen, Vehicle.FAST);
-        gameState.buildStreet(pl_pig, pl_hanno, Vehicle.MEDIUM);
-        gameState.buildStreet(pl_pig, pl_murica, Vehicle.SLOW);
-        gameState.buildStreet(pl_pig, pl_kaffstadt, Vehicle.MEDIUM);
-        gameState.buildStreet(pl_berlin, pl_kaffstadt, Vehicle.FAST);
-        gameState.buildStreet(pl_kiel, pl_bremen, Vehicle.FAST);
-        gameState.buildStreet(pl_kiel, pl_berlin, Vehicle.FAST);
-
-        gameState.buildStreet(pl_forgotten_island, pl_sylt, Vehicle.FAST);
-        gameState.buildStreet(pl_forgotten_island, pl_newYork, Vehicle.MEDIUM);
-        gameState.buildStreet(pl_forgotten_island, pl_washington, Vehicle.SLOW);
-        gameState.buildStreet(pl_sylt, pl_newYork, Vehicle.MEDIUM);
-        gameState.buildStreet(pl_newYork, pl_washington, Vehicle.FAST);
-
-        int det = gameState.addDetective("Detestive", pl_hanno);
-        int detTwo = gameState.addDetective("Numero dos", pl_kiel);
-        int mrx = gameState.addMrX(pl_forgotten_island);
-
-        Player detective = gameState.getPlayerByPort(det);
-        Player misterX = gameState.getPlayerByPort(mrx);
 
         fillInventoryX();
         fillInventory();
@@ -292,10 +260,12 @@ public class GameView extends SurfaceView {
         firstPhaseIteration = true;
 
         // Set start position of Mr. X
-        gameState.getTimeline().addRound(null, gameState.getMrX().getPlace());
+        /*gameState.getTimeline().addRound(null, gameState.getMrX().getPlace()); TODO UNCOMMENT
         if (timelineChangeListener != null) {
             timelineChangeListener.onTurnAdded(null, gameState.getMrX().getPlace());
         }
+
+         */
 
         gameLoop();
     }
@@ -315,10 +285,58 @@ public class GameView extends SurfaceView {
             Figure selectedFigureRightNow = selectedFigure;
 
             switch (currPhase) {
-                case DET_MRX_TRANSITION:
-
-                    showMessageAndWaitForClick("Mr. X's turn. Detectives don't look.", GAME_PHASE.MRX_CHOOSE_TURN);
+                case BUILD_WORLD: {
+                    if(selectedCityRightNow != null) {
+                        changePhase(GAME_PHASE.BUILD_WORLD_CITY_SELECTED);
+                    } else {
+                        try {
+                            Thread.sleep(250);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     break;
+                }
+                case BUILD_WORLD_CITY_SELECTED: {
+                    if(selectedCityRightNow == null) {
+                        changePhase(GAME_PHASE.BUILD_WORLD);
+                    } else {
+                        try {
+                            Thread.sleep(250);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    break;
+                }
+                case BUILD_WORLD_WAIT_FOR_CITY_TWO: {
+                    connectCitySelectionOne.select();
+                    if(selectedCityRightNow != null && selectedCityRightNow != connectCitySelectionOne) {
+                        changePhase(GAME_PHASE.BUILD_WORLD_STREET_BUILD_CONFIRM);
+                    } else {
+                        try {
+                            Thread.sleep(250);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    break;
+                }
+                case BUILD_WORLD_STREET_BUILD_CONFIRM: {
+                    if(selectedCityRightNow == null || selectedCityRightNow == connectCitySelectionOne) {
+                        changePhase(GAME_PHASE.BUILD_WORLD_WAIT_FOR_CITY_TWO);
+                    }
+                    break;
+                }
+
+
+                case DET_MRX_TRANSITION:
+                    //TODO REMOVE NEXT TWO LINES
+                    changePhase(GAME_PHASE.BUILD_WORLD);
+                    break;
+
+                    //showMessageAndWaitForClick("Mr. X's turn. Detectives don't look.", GAME_PHASE.MRX_CHOOSE_TURN);
+                    //break;
 
                 case MRX_CHOOSE_TURN: { // ----===== Mr. X's turn starts =====-----
                     if (firstPhaseIteration) {
@@ -1203,6 +1221,23 @@ public class GameView extends SurfaceView {
         return hasValidMove(toCheckFor.getPlace(), toCheckFor.getPort());
     }
 
+    float touchedX;
+    float touchedY;
+    Vector<Place> newBuild = new Vector<>();
+
+    City connectCitySelectionOne;
+    private void buildPlaceOnTouch() {
+        newBuild.add(gameState.buildPlace("City " + newBuild.size(), false, touchedX, touchedY));
+    }
+
+    private void buildStreetOnConfirm() {
+        gameState.buildStreet(connectCitySelectionOne.getPlace(), selectedCity.getPlace(), Vehicle.SLOW);
+        connectCitySelectionOne.deselect();
+        selectedCity.deselect();
+        connectCitySelectionOne = null;
+        selectedCity = null;
+    }
+
     public void confirmSelection() {
         toUseForTravel = new Vector<>(selectedTickets);
         toTravel = selectedFigure;
@@ -1210,6 +1245,28 @@ public class GameView extends SurfaceView {
 
 
         switch (currPhase) {
+            case BUILD_WORLD: {
+                Log.i("WorldBuilding", "");
+                for(int i = 0; i < newBuild.size(); i++) {
+                    Log.i("", "City" + i + ": " + newBuild.get(i).getCity().getX() + ", " + newBuild.get(i).getCity().getY());
+                }
+
+                for(int i = 0; i < gameState.getStreets().size(); i++) {
+                    Log.i("", "Street" + i + gameState.getStreets().get(i).getSource().getData().getName() + " -> " + gameState.getStreets().get(i).getTarget().getData().getName());
+                }
+                break;
+            }
+            case BUILD_WORLD_CITY_SELECTED: {
+                connectCitySelectionOne = toTravelTo;
+                changePhase(GAME_PHASE.BUILD_WORLD_WAIT_FOR_CITY_TWO);
+                break;
+            }
+            case BUILD_WORLD_STREET_BUILD_CONFIRM: {
+                buildStreetOnConfirm();
+                changePhase(GAME_PHASE.BUILD_WORLD);
+                break;
+            }
+
             case MRX_MOVE_CONFIRM: {
                 // if city was deselected in the meantime
                 if (toTravelTo == null) {
@@ -1491,6 +1548,13 @@ public class GameView extends SurfaceView {
                         if (selectedFigure != null) {
                             selectedFigure.deselect();
                             selectedFigure = null;
+                        }
+
+                        if(currPhase == GAME_PHASE.BUILD_WORLD) {
+                            touchedX = (e.getX() + (-viewPortX)) * (1 / mapScaleFactor);
+                            touchedY = (e.getY() + (-viewPortY)) * (1 / mapScaleFactor);
+                            buildPlaceOnTouch();
+
                         }
                     }
 

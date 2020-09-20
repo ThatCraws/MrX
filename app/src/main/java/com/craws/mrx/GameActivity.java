@@ -1,5 +1,6 @@
 package com.craws.mrx;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentManager;
@@ -28,44 +29,51 @@ import com.craws.mrx.state.Timeline;
 import java.util.Vector;
 
 public class GameActivity extends AppCompatActivity {
+    // --- GAME-VIEW ---
     private Thread gameLoopThread;
 
     private GameView gameView;
+
+    // --- INVENTORY ---
+    private Vector<Ticket> activeInventory;
 
     private RelativeLayout relativeLayoutInventory;
     private RecyclerView recInventory;
     private InventoryAdapter adapterInv;
 
+    // --- TIMELINE ---
+    private Timeline timeline;
+
     private RecyclerView recTimeline;
     private TimelineAdapter adapterTL;
     private int currColorIndex;
 
+    // --- PHASES ---
     private TextView txtInstructions;
     FragmentInterrupted fragmentInterrupted;
-
-    // The displayed inventory in the RecyclerView. Will have to be built every time player's change.
-    private Vector<Ticket> activeInventory;
-    private Timeline timeline;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
+        // --------======== GAME-VIEW ========--------
+
         gameView = findViewById(R.id.gameView);
 
+        // --------======== INVENTORY ========--------
+        activeInventory = new Vector<>();
+        // --- FINDING VIEWS FROM LAYOUT ---
         relativeLayoutInventory = findViewById(R.id.relLayout_inventory);
-
-        txtInstructions = findViewById(R.id.textView_instruction);
-
         // Graphical part of the inventory
         recInventory = findViewById(R.id.recycViewInventory);
-        // Starting with Mr. X's Inventory
-        activeInventory = new Vector<>();
+
+        // --- INITIALIZING INVENTORY/ADAPTER ---
         adapterInv = new InventoryAdapter(activeInventory);
 
         recInventory.setAdapter(adapterInv);
 
+        // --- SELECTION TRACKING ---
         SelectionTracker<Long> tracker =
                 new SelectionTracker.Builder<>(
                         "inventorySelection",
@@ -90,52 +98,11 @@ public class GameActivity extends AppCompatActivity {
 
         adapterInv.setTracker(tracker);
 
+        // --- LAYOUT ---
         recInventory.setLayoutManager(new GridLayoutManager(this, 2));
         recInventory.setHasFixedSize(true);
 
-        // The "end turn" button
-        Button theButton = findViewById(R.id.btn_confirm);
-        theButton.setOnClickListener((view) -> {
-            // When confirm is pressed, the gameLoop comes to a hold, so not to mess with the state (especially the selected tickets and place).
-            gameView.setPlaying(false);
-            try {
-                gameLoopThread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            gameView.confirmSelection();
-
-            gameView.setPlaying(true);
-            gameLoopThread = new Thread(gameView::gameLoop);
-            gameLoopThread.start();
-        });
-
-        // The graphical representation of the timeline
-        recTimeline = findViewById(R.id.recycle_timeline);
-
-        timeline = new Timeline();
-
-        adapterTL = new TimelineAdapter(timeline);
-
-        currColorIndex = 0;
-
-        recTimeline.setAdapter(adapterTL);
-        recTimeline.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
-
-        // To manage the game, we listen for phase changes
-        fragmentInterrupted = new FragmentInterrupted(); // "Cutscenes". Used to block view from Detective-user when they pass the device to the Chad Mr. X
-        gameView.setOnPhaseChangeListener((phase) -> {
-
-            if (phase == GameView.GAME_PHASE.INTERRUPTED) {
-                startInterrupted();
-            } else {
-                stopInterrupted();
-            }
-
-            setUserInstruction(phase);
-        });
-
+        // --- LISTENER ---
         // To update the Inventory-RecyclerView
         gameView.setInventoryChangeListener(new InventoryChangeListener() {
             @Override
@@ -154,6 +121,61 @@ public class GameActivity extends AppCompatActivity {
             }
         });
 
+
+        // --------======== PHASE MANAGEMENT ========--------
+
+        // --- LISTENER ---
+        // To manage the game, we listen for phase changes
+        fragmentInterrupted = new FragmentInterrupted(); // "Cutscenes". Used to block view from Detective-user when they pass the device to the Chad Mr. X
+        gameView.setOnPhaseChangeListener((phase) -> {
+
+            if (phase == GameView.GAME_PHASE.INTERRUPTED) {
+                startInterrupted();
+            } else {
+                stopInterrupted();
+            }
+
+            setUserInstruction(phase);
+        });
+
+
+        // --- FIND VIEWS ---
+        txtInstructions = findViewById(R.id.textView_instruction);
+        // - confirm button -
+        Button theButton = findViewById(R.id.btn_confirm);
+
+        theButton.setOnClickListener((view) -> {
+            // When confirm is pressed, the gameLoop comes to a hold, so not to mess with the state (especially the selected tickets and place).
+            gameView.setPlaying(false);
+            try {
+                gameLoopThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            gameView.confirmSelection();
+
+            gameView.setPlaying(true);
+            gameLoopThread = new Thread(gameView::gameLoop);
+            gameLoopThread.start();
+        });
+
+
+        // --------======== TIMELINE ========--------
+
+        // The graphical representation of the timeline
+        timeline = new Timeline();
+        currColorIndex = 0; // for marking on the timeline
+        // --- INITIALIZE VIEWS/ADAPTER ---
+        recTimeline = findViewById(R.id.recycle_timeline);
+
+        adapterTL = new TimelineAdapter(timeline);
+
+        recTimeline.setAdapter(adapterTL);
+        recTimeline.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
+
+
+        // --- LISTENER ---
         gameView.setTimelineChangeListener(new TimelineChangeListener() {
             @Override
             public void onTurnAdded(@Nullable Ticket ticket, Place destination) {
@@ -166,11 +188,10 @@ public class GameActivity extends AppCompatActivity {
             }
         });
 
-
         // Create new Thread so we can leave onCreate (and access the Views) while starting the game.
         gameLoopThread = new Thread(() -> gameView.startGame());
 
-       gameLoopThread.start();
+        gameLoopThread.start();
     }
 
     // --------======== LISTENER HELPER ========--------
@@ -242,11 +263,26 @@ public class GameActivity extends AppCompatActivity {
         });
     }
 
-                // -------- PHASE-MANAGEMENT --------
+    // -------- PHASE-MANAGEMENT --------
     String lastHelpText = "";
-    public void setUserInstruction(final GameView.GAME_PHASE phase) {
+    public void setUserInstruction(@NonNull final GameView.GAME_PHASE phase) {
         String helpText = "";
         switch (phase) {
+            // WORLD BUILDER
+            case BUILD_WORLD:
+                helpText = "Click somewhere to create city or click city to build streets";
+                break;
+            case BUILD_WORLD_CITY_SELECTED:
+                helpText = "Click confirm to start street-building";
+                break;
+            case BUILD_WORLD_WAIT_FOR_CITY_TWO:
+                helpText = "Select second city";
+                break;
+            case BUILD_WORLD_STREET_BUILD_CONFIRM:
+                helpText = "Click confirm to build street between these cities";
+                break;
+
+
             case MRX_CHOOSE_TURN:
                 helpText = "Click city to move to or the ticket with the ability to activate";
                 break;
@@ -398,6 +434,7 @@ public class GameActivity extends AppCompatActivity {
             }
         });
     }
+
 
     //--------======== INHERITED METHODS ========--------
 
