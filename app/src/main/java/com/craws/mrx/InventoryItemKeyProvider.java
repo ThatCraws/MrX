@@ -5,11 +5,11 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.selection.ItemKeyProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
-class InventoryItemKeyProvider<K> extends ItemKeyProvider<Long> {
+public class InventoryItemKeyProvider<K> extends ItemKeyProvider<Long> {
     RecyclerView recyclerView;
 
 
-    protected InventoryItemKeyProvider(RecyclerView recyclerView) {
+    public InventoryItemKeyProvider(RecyclerView recyclerView) {
         super(ItemKeyProvider.SCOPE_MAPPED);
         this.recyclerView = recyclerView;
     }

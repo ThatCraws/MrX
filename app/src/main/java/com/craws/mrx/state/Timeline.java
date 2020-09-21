@@ -93,7 +93,7 @@ public class Timeline {
         }
     }
 
-    private class Item {
+    private static class Item {
         private Ticket ticket;
         private Place place;
         private boolean marked;

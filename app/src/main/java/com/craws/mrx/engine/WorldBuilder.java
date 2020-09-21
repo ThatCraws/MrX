@@ -1,7 +1,6 @@
 package com.craws.mrx.engine;
 
 import com.craws.mrx.state.GameState;
-import com.craws.mrx.state.Place;
 
 public class WorldBuilder {
     public static void buildWorld(GameState state) {

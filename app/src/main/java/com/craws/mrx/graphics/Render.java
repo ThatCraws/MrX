@@ -1,6 +1,5 @@
 package com.craws.mrx.graphics;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -24,7 +23,7 @@ public abstract class Render {
     // viewport
     protected Rect viewport;
 
-    // position in gameView
+    // current position in gameView
     private float x;
     private float y;
     Rect targetViewport;

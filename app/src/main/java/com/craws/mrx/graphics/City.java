@@ -6,10 +6,12 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 
 import com.craws.mrx.R;
-import com.craws.mrx.state.Place;
 
 public class City extends Render {
-    private Place place;
+
+    private String name;
+    private boolean goal;
+    private boolean selected;
 
     // all the frames
     private static class FRAMES {
@@ -22,33 +24,49 @@ public class City extends Render {
         final static int FRAMES_H = 2;
     }
 
-    public City(final Context context, final Place place) {
+    public City(final Context context, final String name) {
         super(BitmapFactory.decodeResource(context.getResources(), R.drawable.city_sprites), FRAMES.FRAMES_W, FRAMES.FRAMES_H, 0f, 0f);
-        this.place = place;
 
-        currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
+        this.name = name;
+        this.goal = false;
+
+        currFrame = FRAMES.NORMAL;
         updateViewport();
     }
 
-    public City(final Context context, final Place place, final float x, final float y) {
-        super(BitmapFactory.decodeResource(context.getResources() , R.drawable.city_sprites), FRAMES.FRAMES_W, FRAMES.FRAMES_H, x, y);
-        this.place = place;
+    public City(final Context context, final String name, final float x, final float y) {
+        super(BitmapFactory.decodeResource(context.getResources(), R.drawable.city_sprites), FRAMES.FRAMES_W, FRAMES.FRAMES_H, x, y);
 
-        currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
+        this.name = name;
+        this.goal = false;
+
+        currFrame = FRAMES.NORMAL;
+        updateViewport();
     }
 
-    public City(final Context context, final Place place, final float x, final float y, final int width, final int height) {
-        super(BitmapFactory.decodeResource(context.getResources(), R.drawable.city_sprites), FRAMES.FRAMES_W, FRAMES.FRAMES_H, x, y, width, height);
-        this.place = place;
+    public City(final Context context, final String name, final float x, final float y, final boolean goal) {
+        super(BitmapFactory.decodeResource(context.getResources() , R.drawable.city_sprites), FRAMES.FRAMES_W, FRAMES.FRAMES_H, x, y);
 
-        currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
+        this.name = name;
+        this.goal = goal;
+
+        currFrame = goal ? FRAMES.GOAL : FRAMES.NORMAL;
+    }
+
+    public City(final Context context, final String name, final float x, final float y, final boolean goal, final int width, final int height) {
+        super(BitmapFactory.decodeResource(context.getResources(), R.drawable.city_sprites), FRAMES.FRAMES_W, FRAMES.FRAMES_H, x, y, width, height);
+
+        this.name = name;
+        this.goal = goal;
+
+        currFrame = goal ? FRAMES.GOAL : FRAMES.NORMAL;
     }
 
     @Override
     public void draw(final Canvas canvas, final Paint paint) {
         super.draw(canvas, paint);
 
-        canvas.drawText(place.getName(), targetViewport.left + getWidth() / 2f, targetViewport.bottom + 20, paint);
+        canvas.drawText(name, targetViewport.left + getWidth() / 2f, targetViewport.bottom + 20, paint);
     }
 
     @Override
@@ -57,14 +75,10 @@ public class City extends Render {
     }
 
     public void select() {
-        currFrame = place.isGoal() ? FRAMES.GOAL_SELECTED : FRAMES.SELECTED;
+        currFrame = goal ? FRAMES.GOAL_SELECTED : FRAMES.SELECTED;
     }
 
     public void deselect() {
-        currFrame = place.isGoal() ? FRAMES.GOAL : FRAMES.NORMAL;
-    }
-
-    public Place getPlace() {
-        return place;
+        currFrame = goal ? FRAMES.GOAL : FRAMES.NORMAL;
     }
 }

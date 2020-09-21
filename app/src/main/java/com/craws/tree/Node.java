@@ -113,6 +113,12 @@ public class Node<U, V> {
         return null;
     }
 
+    /**
+     * Returns all the Nodes directly connected to this one.
+     *
+     * @return The Nodes directly connected to this one.
+     * @author Julien
+     */
     public Vector<Node<U, V>> getAdjacentNodes() {
         Vector<Node<U, V>> toRet = new Vector<>();
         for (Edge<U, V> currEdge : edges) {

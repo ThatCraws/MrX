@@ -264,11 +264,10 @@ public class Tree<U, V> {
 
     // ----------- GETTERS -----------
 
-    // Should this even stay? To the outside I wanna handle IDs and not Nodes...
     public Node<U, V> getRoot() {
         return root;
     }
-    // Should this even stay? To the outside I wanna handle IDs and not Nodes...
+
     public Vector<Node<U, V>> getNodes() {
         return nodes;
     }

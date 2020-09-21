@@ -1,7 +1,5 @@
 package com.craws.mrx.state;
 
-import android.content.Context;
-
 import com.craws.tree.Edge;
 import com.craws.tree.Tree;
 
@@ -30,17 +28,12 @@ public class GameState {
     // The Mr. X player's inventory;
     private Vector<Ticket> inventoryX;
 
-    // Because android this class has to know about context...
-    private Context context;
-
-    public GameState(final Context context) {
-        this.context = context;
+    public GameState() {
         map = new Tree<>();
         setup();
     }
 
-    public GameState(final Context context, final Place firstPlace) {
-        this.context = context;
+    public GameState(final Place firstPlace) {
         map = new Tree<>(firstPlace);
         setup();
     }
@@ -80,26 +73,18 @@ public class GameState {
      * Connections between Places can be made via buildStreet().
      * @param name The user-displayable name of the Place.
      * @param goal true, if this is a goal-Place for Mr.X (default = false)
-     * @param x The initial x-position of the City representing the newly created Place (default = 0)
-     * @param y The initial y-position of the City representing the newly created Place (default = 0)
      *
      * @author Julien
      *
      */
-    public Place buildPlace(final String name, final boolean goal, final float x, final float y) {
-        Place newPlace = new Place(context, name, goal, x, y);
+    public Place buildPlace(final String name, final boolean goal) {
+        Place newPlace = new Place(name, goal);
         map.insertNode(newPlace);
         return newPlace;
     }
 
     public Place buildPlace(final String name) {
-        Place newPlace = new Place(context, name);
-        map.insertNode(newPlace);
-        return newPlace;
-    }
-
-    public Place buildPlace(final String name, final boolean goal) {
-        Place newPlace = new Place(context, name, goal);
+        Place newPlace = new Place(name);
         map.insertNode(newPlace);
         return newPlace;
     }
@@ -115,15 +100,18 @@ public class GameState {
      * @author Julien
      *
      */
-    public void buildStreet(final Place start, final Place destination, final Vehicle ticketNeeded) {
+    public Edge<Place, Vehicle> buildStreet(final Place start, final Place destination, final Vehicle ticketNeeded) {
         final int startIndex = map.getIndexByData(start);
         final int endIndex = map.getIndexByData(destination);
 
         if(startIndex == -1 || endIndex == -1 ) {
-            return;
+            return null;
         }
 
-        streets.add(map.insertEdge(startIndex, endIndex, ticketNeeded));
+        Edge<Place, Vehicle> newStreet = map.insertEdge(startIndex, endIndex, ticketNeeded);
+        streets.add(newStreet);
+
+        return newStreet;
     }
 
     /**
@@ -143,12 +131,12 @@ public class GameState {
      *
      */
     public int addMrX(final Place startPosition) {
-        mrX = new Player(context, 0, "Mr. X", startPosition);
+        mrX = new Player(0, "Mr. X", startPosition);
         return 0;
     }
 
     public int addMrX() {
-        mrX = new Player(context, 0, "MrX", null);
+        mrX = new Player(0, "MrX", null);
         return 0;
     }
 
@@ -167,12 +155,12 @@ public class GameState {
      *
      */
     public int addDetective(final String alias, final Place startPosition) {
-        Player newChallenger = new Player(context, port, alias, startPosition);
+        Player newChallenger = new Player(port, alias, startPosition);
         return addDetective(newChallenger);
     }
 
     public int addDetective(final String alias) {
-        Player newChallenger = new Player(context, port, alias, null);
+        Player newChallenger = new Player(port, alias, null);
         return addDetective(newChallenger);
     }
 
