@@ -80,7 +80,7 @@ public class Figure extends Render {
                 /* To create an ease-in and out effect, we use the curve of the quadratic function x^2.
                     To let its value rise to 1 (at x = 0) and then drop again, we just use the factor -1 (turning it upside down).
                     We then raise it so the maximum turning point is 1, so we end on the function:
-                        f(x) = 2x^2 * (-1) + 1
+                        f(x) = -x^2 + 1
                         x | f(x)
                         -1| 0
                         0 | 1

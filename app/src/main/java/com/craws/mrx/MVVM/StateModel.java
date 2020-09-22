@@ -8,6 +8,7 @@ import com.craws.mrx.state.Ability;
 import com.craws.mrx.state.GameState;
 import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Player;
+import com.craws.mrx.state.ShadowTicket;
 import com.craws.mrx.state.Ticket;
 import com.craws.mrx.state.Vehicle;
 import com.craws.tree.Edge;
@@ -144,29 +145,41 @@ public class StateModel {
         Place pl_kiel = addPlace("Kiel", false);
         Place pl_bremen = addPlace("Bremen", false);
         Place pl_hanno = addPlace("Hannover", false);
-        Place pl_pig = addPlace("Pig", false);
+        Place pl_nonne = addPlace("Nonne Stadt", false);
         Place pl_murica = addPlace("Murica", true);
-        Place pl_kaffstadt = addPlace("Kaffster", false);
+        Place pl_hexter = addPlace("Hexter", false);
         Place pl_berlin = addPlace("Berlin", false);
 
+        Place pl_bridge = addPlace("Grossseistadt");
         Place pl_forgotten_island = addPlace("Nowheresville", false);
         Place pl_sylt = addPlace("Sylt", false);
         Place pl_newYork = addPlace("New York", false);
         Place pl_washington = addPlace("Washington", false);
+        Place pl_tristate = addPlace("Tricity", false);
 
-        addStreet(pl_pig, pl_bremen, Vehicle.FAST);
-        addStreet(pl_pig, pl_hanno, Vehicle.MEDIUM);
-        addStreet(pl_pig, pl_murica, Vehicle.SLOW);
-        addStreet(pl_pig, pl_kaffstadt, Vehicle.MEDIUM);
-        addStreet(pl_berlin, pl_kaffstadt, Vehicle.FAST);
-        addStreet(pl_kiel, pl_bremen, Vehicle.FAST);
+        addStreet(pl_nonne, pl_bremen, Vehicle.MEDIUM);
+        addStreet(pl_nonne, pl_hanno, Vehicle.SLOW);
+        addStreet(pl_nonne, pl_murica, Vehicle.MEDIUM);
+        addStreet(pl_nonne, pl_hexter, Vehicle.SLOW);
+        addStreet(pl_berlin, pl_hexter, Vehicle.SLOW);
+        addStreet(pl_kiel, pl_bremen, Vehicle.MEDIUM);
         addStreet(pl_kiel, pl_berlin, Vehicle.FAST);
 
-        addStreet(pl_forgotten_island, pl_sylt, Vehicle.FAST);
-        addStreet(pl_forgotten_island, pl_newYork, Vehicle.MEDIUM);
-        addStreet(pl_forgotten_island, pl_washington, Vehicle.SLOW);
-        addStreet(pl_sylt, pl_newYork, Vehicle.MEDIUM);
-        addStreet(pl_newYork, pl_washington, Vehicle.FAST);
+        addStreet(pl_forgotten_island, pl_sylt, Vehicle.MEDIUM);
+        addStreet(pl_forgotten_island, pl_newYork, Vehicle.FAST);
+        addStreet(pl_forgotten_island, pl_washington, Vehicle.FAST);
+        addStreet(pl_sylt, pl_newYork, Vehicle.FAST);
+        addStreet(pl_newYork, pl_washington, Vehicle.SLOW);
+        addStreet(pl_forgotten_island, pl_berlin, Vehicle.SLOW);
+
+        addStreet(pl_bridge, pl_kiel, Vehicle.SLOW);
+        addStreet(pl_bridge, pl_sylt, Vehicle.MEDIUM);
+        addStreet(pl_kiel, pl_sylt, Vehicle.FAST);
+
+        addStreet(pl_tristate, pl_forgotten_island, Vehicle.MEDIUM);
+        addStreet(pl_tristate, pl_sylt, Vehicle.SLOW);
+        addStreet(pl_tristate, pl_newYork, Vehicle.MEDIUM);
+
 
         addDetective("Detestive", pl_hanno);
         addDetective("DetTwo", pl_kiel);
@@ -535,7 +548,7 @@ public class StateModel {
                     break;
                 }
                 case MRX_SPECIAL_MOVE: { // ----===== Shadow Ticket move got confirmed. Move, put ticket in timeline =====-----
-                    Ticket ticketOfShadows = new Ticket(Vehicle.SHADOW, Ability.SHADOW);
+                    Ticket ticketOfShadows = new ShadowTicket();
                     gameState.doFreeMove(0, toTravelTo);
                     gameState.getTimeline().addRound(ticketOfShadows, toTravelTo);
 
@@ -1019,6 +1032,9 @@ public class StateModel {
                 case DET_WON: {
                     waitForClick(GAME_PHASE.GAME_OVER);
                     break;
+                }
+                case GAME_OVER: {
+                    liveUserMessage.postValue("GAME OVER, YAY!");
                 }
 
                 default:

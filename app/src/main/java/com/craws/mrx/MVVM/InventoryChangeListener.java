@@ -1,8 +1,4 @@
-package com.craws.mrx.engine;
-
-import com.craws.mrx.state.Ticket;
-
-import java.util.List;
+package com.craws.mrx.MVVM;
 
 public interface InventoryChangeListener {
     void onAdd(final int position);

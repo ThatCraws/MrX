@@ -70,9 +70,6 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
     public void onBindViewHolder(@NonNull InventoryAdapter.ViewHolder holder, final int position) {
         Ticket ticket = inventory.get(position);
 
-        ImageView vehicle;
-        ImageView ability;
-
         switch(ticket.getVehicle()) {
             case SLOW:
                 holder.imageVehicle.setImageResource(R.drawable.vehicle_slow);
@@ -111,7 +108,7 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
     @Override
     public long getItemId(final int position) {
 
-        return ((long) inventory.get(position).hashCode());
+        return inventory.get(position).hashCode();
     }
 
     public Ticket getTicketById(final long id) {

@@ -15,9 +15,6 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.craws.mrx.engine.GameView;
 import com.craws.mrx.engine.GameViewListener;
-import com.craws.mrx.engine.InventoryChangeListener;
-import com.craws.mrx.engine.PhaseChangeListener;
-import com.craws.mrx.engine.TimelineChangeListener;
 import com.craws.mrx.graphics.City;
 import com.craws.mrx.graphics.Figure;
 import com.craws.mrx.state.Place;
@@ -47,22 +44,18 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
 
     private City selectedCity;
     private Figure selectedFigure;
-    private Vector<Ticket> selectedTickets;
     private Vector<City> markedCities;
 
-    // --- GameActivity ---
-    // To give the inventory-events to the GameActivity
-    private InventoryChangeListener inventoryChangeListener;
+    // --- Observer (for GameActivity/Views) ---
+    private Vector<StateViewModelObserver> observers;
+
     // Simulated inventory for the recyclerView
     private Vector<Ticket> simulatedInventory;
-    // To give the timeline-events to the GameActivity
-    private TimelineChangeListener timelineChangeListener;
+
     // Simulated inventory for the recyclerView
     private Timeline simulatedTimeline;
 
-    private PhaseChangeListener phaseChangeListener;
-
-
+    // The user instruction depending on game-phase
     private MutableLiveData<String> userHelpText;
 
     // --- Drawing stuff ---
@@ -108,17 +101,19 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
         streets = new Vector<>();
 
         // Selecting and marking
-        selectedTickets = new Vector<>();
         markedCities = new Vector<>();
 
         showMrX = true;
 
-        // GameActivity RecyclerView simulation-data
+        // Observer data
+        observers = new Vector<>();
+
         simulatedInventory = new Vector<>();
         simulatedTimeline = new Timeline();
 
         userHelpText = new MutableLiveData<>("");
 
+        // Setting up paint to draw with
         paint = new Paint();
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setTextSize(GameView.DEFAULT_TXT_SIZE);
@@ -139,7 +134,7 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
 
     @Override
     public boolean onTouchAction(MotionEvent e) {
-        
+
         // If a user message is displayed
         if (phaseObserver == StateModel.GAME_PHASE.INTERRUPTED || phaseObserver == StateModel.GAME_PHASE.WAIT_FOR_CLICK) {
 
@@ -434,7 +429,7 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
                 coords[0] = 200f;
                 coords[1] = 550f;
                 break;
-            case "Pig":
+            case "Nonne Stadt":
                 coords[0] = 400f;
                 coords[1] = 400f;
                 break;
@@ -442,7 +437,7 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
                 coords[0] = 500f;
                 coords[1] = 600f;
                 break;
-            case "Kaffster":
+            case "Hexter":
                 coords[0] = 600f;
                 coords[1] = 475f;
                 break;
@@ -455,22 +450,32 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
                 coords[1] = 350f;
                 break;
             case "Sylt":
-                coords[0] = 1000;
+                coords[0] = 1000f;
                 coords[1] = 100f;
                 break;
             case "New York":
-                coords[0] = 1250;
+                coords[0] = 1250f;
                 coords[1] = 500f;
                 break;
+            case "Tricity":
+                coords[0] = 900f;
+                coords[1] = 320f;
+                break;
             case "Washington":
-                coords[0] = 1100;
+                coords[0] = 1100f;
                 coords[1] = 750f;
+                break;
+            case "Grossseistadt":
+                coords[0] = 625f;
+                coords[1] = 150f;
                 break;
             default:
                 coords[0] = 0f;
                 coords[1] = 0f;
         }
 
+        coords[0] *=2; // just wanna spread the map a little
+        coords[1] *=2;
         return coords;
     }
 
@@ -566,9 +571,11 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
 
     @Override
     public void onTimelineEntryAdded(Ticket ticketUsed, Place movedTo) {
+        int nextIndex = simulatedTimeline.size();
         simulatedTimeline.addRound(ticketUsed, movedTo);
-        if(timelineChangeListener != null) {
-            timelineChangeListener.onTurnAdded(ticketUsed, movedTo);
+        for(int i = 0; i < observers.size(); i++) {
+            // sent on to be added to the View
+            observers.get(i).onTimelineTurnAdded(nextIndex);
         }
     }
 
@@ -576,8 +583,8 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
     public void onTimelineEntryMarked(int position) {
         simulatedTimeline.mark(position);
         markedCities.add(placeCityHashMap.get(simulatedTimeline.getPlaceForRound(position)));
-        if(timelineChangeListener != null) {
-            timelineChangeListener.onTurnMarked(position);
+        for(int i = 0; i < observers.size(); i++) {
+            observers.get(i).onTimelineTurnMarked(position);
         }
     }
 
@@ -586,30 +593,31 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
         int size = simulatedInventory.size();
 
         simulatedInventory.clear();
-        if(inventoryChangeListener != null) {
-            inventoryChangeListener.onClear(size);
+
+        for(int i = 0; i < observers.size(); i++) {
+            observers.get(i).onInventoryClear(size);
         }
 
         simulatedInventory.addAll(newInventory);
 
-        if(inventoryChangeListener != null) {
-            inventoryChangeListener.onAddAll(simulatedInventory.size());
+        for(int i = 0; i < observers.size(); i++) {
+            observers.get(i).onInventoryAddAll(simulatedInventory.size());
         }
     }
 
     @Override
     public void onInventoryTicketAdded(Ticket ticketAdded) {
         simulatedInventory.add(ticketAdded);
-        if(inventoryChangeListener != null) {
-            inventoryChangeListener.onAdd(simulatedInventory.indexOf(ticketAdded));
+        for(int i = 0; i < observers.size(); i++) {
+            observers.get(i).onInventoryAdd(simulatedInventory.indexOf(ticketAdded));
         }
     }
 
     @Override
     public void onInventoryTicketRemoved(int position) {
         simulatedInventory.remove(position);
-        if(inventoryChangeListener != null) {
-            inventoryChangeListener.onRemove(position);
+        for(int i = 0; i < observers.size(); i++) {
+            observers.get(i).onInventoryRemove(position);
         }
     }
 
@@ -637,8 +645,8 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
 
         setUserInstruction(phase);
 
-        if(phaseChangeListener != null) {
-            phaseChangeListener.onPhaseChange(phase);
+        for(int i = 0; i < observers.size(); i++) {
+            observers.get(i).onPhaseChange(phase);
         }
     }
 
@@ -735,7 +743,10 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
                 helpText = "Placeholder DET_WIN_CHECK";
                 break;
             case DET_WON:
-                helpText = "Placeholder DET_WON";
+                helpText = "Detectives won!";
+                break;
+            case MRX_WON:
+                helpText = "Mr. X won!";
                 break;
             case MRX_THROWING_SELECTED_TICKETS:
             case DET_THROWING_SELECTED_TICKETS:
@@ -767,16 +778,8 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
         return simulatedTimeline;
     }
 
-    public void setInventoryChangeListener(InventoryChangeListener inventoryChangeListener) {
-        this.inventoryChangeListener = inventoryChangeListener;
-    }
-
-    public void setTimelineChangeListener(TimelineChangeListener timelineChangeListener) {
-        this.timelineChangeListener = timelineChangeListener;
-    }
-
-    public void setPhaseChangeListener(PhaseChangeListener phaseChangeListener) {
-        this.phaseChangeListener = phaseChangeListener;
+    public boolean registerObserver(StateViewModelObserver observer) {
+        return observers.add(observer);
     }
 
     public MutableLiveData<String> getUserHelpText() {

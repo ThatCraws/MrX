@@ -173,7 +173,7 @@ public class GameView extends SurfaceView {
 
 
     // ----------- LISTENER -----------
-    public void setTouchListener(final GameViewListener listener) {
+    public void setGameViewListener(final GameViewListener listener) {
         gameViewListener = listener;
     }
 

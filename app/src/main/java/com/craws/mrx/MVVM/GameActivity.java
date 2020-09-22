@@ -7,7 +7,6 @@ import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -26,20 +25,15 @@ import com.craws.mrx.InventoryItemKeyProvider;
 import com.craws.mrx.R;
 import com.craws.mrx.TimelineAdapter;
 import com.craws.mrx.engine.GameView;
-import com.craws.mrx.engine.InventoryChangeListener;
-import com.craws.mrx.engine.TimelineChangeListener;
-import com.craws.mrx.state.Place;
 import com.craws.mrx.state.Ticket;
 
-import java.util.List;
 import java.util.Vector;
 
-public class GameActivity extends AppCompatActivity {
+public class GameActivity extends AppCompatActivity implements StateViewModelObserver {
     // --- ViewModel ---
     private StateViewModel viewModel;
 
     // --- GAME-VIEW ---
-    private Thread gameLoopThread;
 
     private GameView gameView;
 
@@ -66,11 +60,12 @@ public class GameActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(StateViewModel.class);
 
         viewModel.getUserHelpText().observe(this, newHelpText -> txtInstructions.setText(newHelpText));
+        viewModel.registerObserver(this);
 
         // --------======== GAME-VIEW ========--------
 
         gameView = findViewById(R.id.gameView);
-        gameView.setTouchListener(viewModel);
+        gameView.setGameViewListener(viewModel);
 
         // --------======== INVENTORY ========--------
         // --- FINDING VIEWS FROM LAYOUT ---
@@ -112,46 +107,11 @@ public class GameActivity extends AppCompatActivity {
         recInventory.setLayoutManager(new GridLayoutManager(this, 2));
         recInventory.setHasFixedSize(true);
 
-        // --- LISTENER ---
-        // To update the Inventory-RecyclerView
-        viewModel.setInventoryChangeListener(new InventoryChangeListener() {
-            @Override
-            public void onAdd(final int position) {
-                activeInventoryAdd(position);
-            }
-
-            @Override
-            public void onAddAll(final int newSize) {
-                activeInventoryAddAll(newSize);
-            }
-
-            @Override
-            public void onRemove(int position) {
-                activeInventoryRemove(position);
-            }
-
-            @Override
-            public void onClear(int oldSize) {
-                activeInventoryClear(oldSize);
-            }
-        });
-
 
         // --------======== PHASE MANAGEMENT ========--------
 
-        // --- LISTENER ---
-        // To manage the game, we listen for phase changes
         fragmentInterrupted = new FragmentInterrupted(); // "Cutscenes". Used to block view from Detective-user when they pass the device to the Chad Mr. X
         viewModel.getModelUserMessage().observe(this, newUserMessage -> fragmentInterrupted.setText(newUserMessage));
-
-        viewModel.setPhaseChangeListener((phase) -> {
-
-            if (phase == StateModel.GAME_PHASE.INTERRUPTED) {
-                startInterrupted();
-            } else {
-                stopInterrupted();
-            }
-        });
 
 
         // --- FIND VIEWS ---
@@ -170,6 +130,7 @@ public class GameActivity extends AppCompatActivity {
 
         // The graphical representation of the timeline
         currColorIndex = 0; // for marking on the timeline
+
         // --- INITIALIZE VIEWS/ADAPTER ---
         recTimeline = findViewById(R.id.recycle_timeline);
 
@@ -179,62 +140,57 @@ public class GameActivity extends AppCompatActivity {
         recTimeline.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
 
 
-        // --- LISTENER ---
-        viewModel.setTimelineChangeListener(new TimelineChangeListener() {
-            @Override
-            public void onTurnAdded(@Nullable Ticket ticket, Place destination) {
-                timelineAdd(ticket, destination);
-            }
-
-            @Override
-            public void onTurnMarked(int round) {
-                markTurn(round);
-            }
-        });
 
         viewModel.setupGame();
         viewModel.startGame();
     }
 
-    // --------======== LISTENER HELPER ========--------
-                // -------- INVENTORY --------
-    private void activeInventoryAdd(final int position) {
+    // --------======== STATE-VIEWMODEL OBSERVER IMPLEMENTATION ========--------
+    // -------- INVENTORY --------
+
+    @Override
+    public void onInventoryAdd(int position) {
         // RecyclerView may only be changed by the Thread that created it
         runOnUiThread(() -> adapterInv.notifyItemInserted(position));
     }
 
-    private void activeInventoryRemove(final int position) {
+    @Override
+    public void onInventoryAddAll(int newSize) {
+        runOnUiThread(() -> adapterInv.notifyItemRangeInserted(0, newSize));
+    }
+
+    @Override
+    public void onInventoryRemove(int position) {
         // RecyclerView may only be changed by the Thread that created it
         runOnUiThread(() -> {
             if (adapterInv.getTracker() != null) {
                 adapterInv.getTracker().clearSelection();
             }
 
-            if(position == 0) {
-                adapterInv.notifyDataSetChanged();
-            } else {
-                adapterInv.notifyItemRemoved(position);
+            if(recInventory.findViewHolderForAdapterPosition(position) != null) {
+                if (position == 0) {
+                    adapterInv.notifyDataSetChanged();
+                } else {
+                    adapterInv.notifyItemRemoved(position);
+                }
             }
         });
     }
 
-    private void activeInventoryClear(final int oldSize) {
+    @Override
+    public void onInventoryClear(int oldSize) {
         runOnUiThread(() -> adapterInv.notifyItemRangeRemoved(0, oldSize));
     }
 
-    private void activeInventoryAddAll(final int newSize) {
-        runOnUiThread(() -> adapterInv.notifyItemRangeInserted(0, newSize));
-    }
 
     // -------- TIMELINE --------
-    private void timelineAdd(final Ticket ticket, final Place place) {
-        runOnUiThread(() -> {
-            int nextIndex = viewModel.getSimulatedTimeline().size() - 1;
-            adapterTL.notifyItemInserted(nextIndex);
-        });
+    @Override
+    public void onTimelineTurnAdded(final int position) {
+        runOnUiThread(() -> adapterTL.notifyItemInserted(position));
     }
 
-    private void markTurn(final int round) {
+    @Override
+    public void onTimelineTurnMarked(int round) {
         runOnUiThread(() -> {
             RecyclerView.LayoutManager layoutManager = recTimeline.getLayoutManager();
 
@@ -246,7 +202,7 @@ public class GameActivity extends AppCompatActivity {
                     Log.d("DetSpecialActivity", "It happened... ViewByPosition not found. :really_sad_face:");
                 }
             } else {
-                Log.d("DetSpecialActivity", "It happened... LayoutManager not found. Da actual fuck.");
+                Log.d("DetSpecialActivity", "It happened... LayoutManager not found.");
             }
 
              */
@@ -255,6 +211,17 @@ public class GameActivity extends AppCompatActivity {
         });
     }
 
+    // -------- PHASE-MANAGEMENT --------
+    @Override
+    public void onPhaseChange(StateModel.GAME_PHASE phase) {
+        if(phase == StateModel.GAME_PHASE.GAME_OVER) {
+            startInterrupted();
+        } else if (phase == StateModel.GAME_PHASE.INTERRUPTED) {
+            startInterrupted();
+        } else {
+            stopInterrupted();
+        }
+    }
 
     public void startInterrupted() {
 

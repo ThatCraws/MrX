@@ -29,7 +29,7 @@ public class InventoryItemKeyProvider<K> extends ItemKeyProvider<Long> {
     public int getPosition(@NonNull Long key) {
         RecyclerView.ViewHolder holder = recyclerView.findViewHolderForItemId(key);
         if(holder != null) {
-            return holder.getLayoutPosition();
+            return holder.getAdapterPosition();
         }
         return -1; // This is ok... Happens regularly
     }
