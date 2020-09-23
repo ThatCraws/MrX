@@ -221,6 +221,13 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
                 }
             }
         }
+
+        // if the camera is scrolling right now stop
+        if(viewPortTargetX != -1 || viewPortTargetY != -1) {
+            viewPortTargetX = -1;
+            viewPortTargetY = -1;
+        }
+
         return true;
     }
 
@@ -237,6 +244,9 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
     // The position we move the map to (or rather the canvas' Matrix meaning moving to the right on the map is moving the Matrix to the left)
     private float viewPortX = 0f;
     private float viewPortY = 0f;
+
+    private float viewPortTargetX = -1f;
+    private float viewPortTargetY = -1f;
 
     // The further we zoom in the bigger the map gets scaled (and the smaller the viewport)
     private float mapScaleFactor = 1f;
@@ -338,6 +348,48 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
 
         for(int i = 0; i < figures.size(); i++) {
             figures.get(i).update();
+        }
+
+        // move camera to next player (viewportTargetY, set in onPlayerActivePlayerChanged
+        if(viewPortTargetX != -1 && viewPortTargetY != -1) {
+            if(viewPortX < -viewPortTargetX) {
+                if (viewPortX + 20 > 0) {
+                    viewPortX = 0;
+                    viewPortTargetX = -1;
+                } else {
+                    viewPortX += 20;
+                }
+
+            } else if (viewPortX > -viewPortTargetX) {
+                if (viewPortX - 20 < ((mapWidth * mapScaleFactor) - (gameViewWidth)) * -1) {
+                    viewPortX = ((mapWidth * mapScaleFactor) - (gameViewWidth)) * -1;
+                    viewPortTargetX = -1;
+                } else {
+                    viewPortX -= 20;
+                }
+            } else {
+                viewPortX = viewPortTargetX;
+                viewPortTargetX = -1;
+            }
+
+            if(viewPortY < -viewPortY) {
+                if (viewPortY + 20 > 0) {
+                    viewPortY = 0;
+                    viewPortTargetY = -1;
+                } else {
+                    viewPortY += 20;
+                }
+            } else if (viewPortY > -viewPortY) {
+                if (viewPortY - 20 < ((mapHeight * mapScaleFactor) - (gameViewHeight)) * -1) {
+                    viewPortY = ((mapHeight * mapScaleFactor) - (gameViewHeight)) * -1;
+                    viewPortTargetY = -1;
+                } else {
+                    viewPortY -= 20;
+                }
+            } else {
+                viewPortY = viewPortTargetY;
+                viewPortTargetY = -1;
+            }
         }
     }
 
@@ -490,7 +542,7 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
     }
 
 
-    // So I don't have to save Edge's
+    // So I don't have to save Edges
     private static class Street {
         public City src;
         public City target;
@@ -566,6 +618,12 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
         selectedFigure = getByPort(newActivePlayer.getPort());
         if (selectedFigure != null) {
             selectedFigure.select();
+        }
+
+        // start scrolling to the active player
+        if(selectedFigure != null) {
+            viewPortTargetX = selectedFigure.getX() - gameViewWidth / 2f;
+            viewPortTargetY = selectedFigure.getY() - gameViewHeight / 2f;
         }
     }
 
