@@ -168,11 +168,7 @@ public class GameActivity extends AppCompatActivity implements StateViewModelObs
             }
 
             if(recInventory.findViewHolderForAdapterPosition(position) != null) {
-                if (position == 0) {
-                    adapterInv.notifyDataSetChanged();
-                } else {
-                    adapterInv.notifyItemRemoved(position);
-                }
+                adapterInv.notifyItemRemoved(position);
             }
         });
     }
