@@ -342,22 +342,27 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
     // ---=== Rendering ===---
     @Override
     public void onUpdate() {
-        for(int i = 0; i < cities.size(); i++) {
+        for (int i = 0; i < cities.size(); i++) {
             cities.get(i).update();
         }
 
-        for(int i = 0; i < figures.size(); i++) {
+        for (int i = 0; i < figures.size(); i++) {
             figures.get(i).update();
         }
 
         // move camera to next player (viewportTargetY, set in onPlayerActivePlayerChanged
-        if(viewPortTargetX != -1 && viewPortTargetY != -1) {
-            if(viewPortX < -viewPortTargetX) {
+        if (viewPortTargetX != -1) {
+            if (viewPortX < -viewPortTargetX) {
                 if (viewPortX + 20 > 0) {
                     viewPortX = 0;
                     viewPortTargetX = -1;
                 } else {
-                    viewPortX += 20;
+                    if (viewPortX + 20 >= -viewPortTargetX) {
+                        viewPortX = -viewPortTargetX;
+                        viewPortTargetX = -1;
+                    } else {
+                        viewPortX += 20;
+                    }
                 }
 
             } else if (viewPortX > -viewPortTargetX) {
@@ -365,29 +370,46 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
                     viewPortX = ((mapWidth * mapScaleFactor) - (gameViewWidth)) * -1;
                     viewPortTargetX = -1;
                 } else {
-                    viewPortX -= 20;
+                    if (viewPortX - 20 <= -viewPortTargetX) {
+                        viewPortX = -viewPortTargetX;
+                        viewPortTargetX = -1;
+                    } else {
+                        viewPortX -= 20;
+                    }
                 }
             } else {
                 viewPortX = viewPortTargetX;
                 viewPortTargetX = -1;
             }
+        }
 
-            if(viewPortY < -viewPortY) {
+        if (viewPortTargetY != -1) {
+            if (viewPortY < -viewPortY) {
                 if (viewPortY + 20 > 0) {
                     viewPortY = 0;
                     viewPortTargetY = -1;
                 } else {
-                    viewPortY += 20;
+                    if (viewPortY + 20 >= -viewPortTargetY) {
+                        viewPortY = -viewPortTargetY;
+                        viewPortTargetY = -1;
+                    } else {
+                        viewPortY += 20;
+                    }
                 }
             } else if (viewPortY > -viewPortY) {
                 if (viewPortY - 20 < ((mapHeight * mapScaleFactor) - (gameViewHeight)) * -1) {
                     viewPortY = ((mapHeight * mapScaleFactor) - (gameViewHeight)) * -1;
                     viewPortTargetY = -1;
                 } else {
-                    viewPortY -= 20;
+                    if (viewPortY - 20 <= -viewPortTargetY) {
+                        viewPortY = -viewPortTargetY;
+                        viewPortTargetY = -1;
+                    } else {
+                        viewPortY -= 20;
+                    }
                 }
             } else {
-                viewPortY = viewPortTargetY;
+                viewPortY = -viewPortTargetY;
                 viewPortTargetY = -1;
             }
         }
@@ -612,7 +634,9 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
 
     @Override
     public void onPlayerActivePlayerChanged(Player newActivePlayer) {
+        Figure figureBefore = null;
         if (selectedFigure != null) {
+            figureBefore = selectedFigure;
             selectedFigure.deselect();
         }
         selectedFigure = getByPort(newActivePlayer.getPort());
@@ -622,8 +646,15 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
 
         // start scrolling to the active player
         if(selectedFigure != null) {
-            viewPortTargetX = selectedFigure.getX() - gameViewWidth / 2f;
-            viewPortTargetY = selectedFigure.getY() - gameViewHeight / 2f;
+            // if Mr. X played before just jump to next player (while screen is black), so camera movement does not give away position.
+            if(figureBefore != null && figureBefore.getPort() == 0) {
+                viewPortX = -(selectedFigure.getX() - gameViewWidth / 2f);
+                viewPortY = -(selectedFigure.getY() - gameViewHeight / 2f);
+            } else {
+                // let camera scroll (done in onUpdate())
+                viewPortTargetX = selectedFigure.getX() - gameViewWidth / 2f;
+                viewPortTargetY = selectedFigure.getY() - gameViewHeight / 2f;
+            }
         }
     }
 
