@@ -21,6 +21,7 @@ public class StateModel {
 
     // inform ViewModel (and anyone who wants to know) about changes
     private Vector<StateModelObserver> observers;
+    private MutableLiveData<Boolean> liveReady;
 
     // ---- Game-Phases ---
     public enum GAME_PHASE {
@@ -99,7 +100,6 @@ public class StateModel {
 
     // The user-message "pauses"
     private boolean continuable;
-    private MutableLiveData<String> liveUserMessage; // Like a real MVVM-architecture, awww
 
     // Game phase management
     private GAME_PHASE currPhase;
@@ -113,6 +113,8 @@ public class StateModel {
     private Vector<Ticket> toUseForTravel = new Vector<>();
 
     // keeping track of the current state of the game
+    private boolean firstTurn = true;
+
     private int currentRound = 0;
     private boolean firstPhaseIteration = true;
     private Player currDetective;
@@ -124,7 +126,7 @@ public class StateModel {
 
         observers = new Vector<>();
 
-        liveUserMessage = new MutableLiveData<>();
+        liveReady = new MutableLiveData<>(false);
     }
 
     public void setupGame() {
@@ -133,8 +135,6 @@ public class StateModel {
         nextPhase = GAME_PHASE.DET_MRX_TRANSITION;
         continuable = true;
 
-        // for the map
-        gameState = new GameState();
         // helpers (like selectedTickets(RightNow) and selectedCity(RightNow), but not overwritten every game loop iteration)
         toTravel = null;
         toTravelTo = null;
@@ -187,6 +187,8 @@ public class StateModel {
 
         fillInventoryX();
         fillInventory();
+
+        liveReady.setValue(true);
     }
 
 
@@ -233,7 +235,13 @@ public class StateModel {
                     if (firstPhaseIteration) {
 
                         // Notify Observers
-                        onInventoryChangeActiveInventory(gameState.getInventoryX());
+                        if(firstTurn) {
+                            onInventorySetStartInventory(gameState.getInventoryX());
+                            firstTurn = false;
+                        } else {
+                            onInventoryChangeActiveInventory(gameState.getInventoryX());
+                        }
+
 
                         firstPhaseIteration = false;
 
@@ -486,6 +494,7 @@ public class StateModel {
                         // Notify Observers
                         onInventoryTicketRemoved(ticketIndex);
                         onPlayerMove(gameState.getPlayerByPort(0), toTravelTo);
+                        onTimelineEntryAdded(toUseForTravel.get(0), toTravelTo);
 
                         if (extraTurnCounter++ >= 2) {
                             changePhase(GAME_PHASE.MRX_WIN_CHECK);
@@ -1034,7 +1043,7 @@ public class StateModel {
                     break;
                 }
                 case GAME_OVER: {
-                    liveUserMessage.postValue("GAME OVER, YAY!");
+                    gameOverScreen();
                 }
 
                 default:
@@ -1216,10 +1225,13 @@ public class StateModel {
      * @param message The message to show the player until he touches the screen.
      */
     private void showMessageAndWaitForClick(final String message, final GAME_PHASE phaseAfter) {
+        // liveUserMessage.postValue(message);
+        for(int i = 0; i < observers.size(); i++) {
+            observers.get(i).onUserMessageChange(message);
+        }
+
         changePhase(GAME_PHASE.INTERRUPTED, phaseAfter);
         continuable = false;
-
-        liveUserMessage.postValue(message);
     }
 
     private void waitForClick(final GAME_PHASE phaseAfter) {
@@ -1236,6 +1248,12 @@ public class StateModel {
                 nextPhase = null;
 
             }
+        }
+    }
+
+    public void gameOverScreen() {
+        for(int i = 0; i < observers.size(); i++) {
+            observers.get(i).onUserMessageChange("GAME OVER, YAY!");
         }
     }
 
@@ -1346,6 +1364,13 @@ public class StateModel {
         }
     }
 
+    private void onInventorySetStartInventory(final Vector<Ticket> startInventory) {
+        for(int i = 0; i < observers.size(); i++) {
+            observers.get(i).onInventoryLoadFirst(startInventory);
+        }
+    }
+
+
     // --- Map Changes ---
 
     private void statePlaceAdded(final Place place) {
@@ -1396,8 +1421,8 @@ public class StateModel {
         return currentRound;
     }
 
-    public MutableLiveData<String> getLiveUserMessage() {
-        return liveUserMessage;
+    public MutableLiveData<Boolean> getLiveReady() {
+        return liveReady;
     }
 
     public void setSelectedPlace(final Place selectedPlace) {

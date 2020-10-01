@@ -50,7 +50,7 @@ public class GameActivity extends AppCompatActivity implements StateViewModelObs
 
     // --- PHASES ---
     private TextView txtInstructions;
-    FragmentInterrupted fragmentInterrupted;
+    private FragmentInterrupted fragmentInterrupted;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,7 +111,6 @@ public class GameActivity extends AppCompatActivity implements StateViewModelObs
         // --------======== PHASE MANAGEMENT ========--------
 
         fragmentInterrupted = new FragmentInterrupted(); // "Cutscenes". Used to block view from Detective-user when they pass the device to the Chad Mr. X
-        viewModel.getModelUserMessage().observe(this, newUserMessage -> fragmentInterrupted.setText(newUserMessage));
 
 
         // --- FIND VIEWS ---
@@ -140,13 +139,12 @@ public class GameActivity extends AppCompatActivity implements StateViewModelObs
         recTimeline.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
 
 
-
-        viewModel.setupGame();
-        viewModel.startGame();
+        viewModel.notifyReady();
     }
 
     // --------======== STATE-VIEWMODEL OBSERVER IMPLEMENTATION ========--------
     // -------- INVENTORY --------
+
 
     @Override
     public void onInventoryAdd(int position) {
@@ -156,7 +154,10 @@ public class GameActivity extends AppCompatActivity implements StateViewModelObs
 
     @Override
     public void onInventoryAddAll(int newSize) {
-        runOnUiThread(() -> adapterInv.notifyItemRangeInserted(0, newSize));
+        runOnUiThread(() -> {
+            adapterInv.notifyDataSetChanged();
+            //adapterInv.notifyItemRangeInserted(0, newSize);
+        });
     }
 
     @Override
@@ -219,6 +220,11 @@ public class GameActivity extends AppCompatActivity implements StateViewModelObs
         }
     }
 
+    @Override
+    public void onUserMessageChange(String newMessage) {
+        fragmentInterrupted.setText(newMessage);
+    }
+
     public void startInterrupted() {
 
         runOnUiThread(() -> {
@@ -236,7 +242,7 @@ public class GameActivity extends AppCompatActivity implements StateViewModelObs
                 }
             }
 
-            viewModel.setModelContinuable(true);
+            viewModel.notifyContinuable(true);
         });
     }
 

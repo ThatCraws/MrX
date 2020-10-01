@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 
@@ -84,6 +85,10 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
     private String userMessage = "";
 
 
+    // To control app-flow
+    private boolean viewsReady;
+    private boolean modelReady;
+
     public StateViewModel(Application app) {
         super(app);
 
@@ -108,6 +113,17 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
         // Observer data
         observers = new Vector<>();
 
+        modelReady = false;
+        viewsReady = false;
+
+        stateModel.getLiveReady().observeForever(ready -> {
+            modelReady = ready;
+            if(viewsReady && modelReady) {
+                Log.d("Setup", "Views were ready first");
+                stateModel.startGame();
+            }
+        });
+
         simulatedInventory = new Vector<>();
         simulatedTimeline = new Timeline();
 
@@ -119,14 +135,15 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
         paint.setTextSize(GameView.DEFAULT_TXT_SIZE);
         paint.setStrokeWidth(20);
 
-    }
-
-    public void startGame() {
-        stateModel.startGame();
-    }
-
-    public void setupGame() {
         stateModel.setupGame();
+    }
+
+    public void notifyReady() {
+        viewsReady = true;
+        if(modelReady) {
+            stateModel.startGame();
+            Log.d("Setup", "Model was ready first");
+        }
     }
 
     // -----===== GAMEVIEWLISTENER IMPLEMENTATION =====-----
@@ -678,6 +695,15 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
     }
 
     @Override
+    public void onInventoryLoadFirst(Vector<Ticket> startInventory) {
+        simulatedInventory.addAll(startInventory);
+
+        for(int i = 0; i < observers.size(); i++) {
+            observers.get(i).onInventoryAddAll(startInventory.size());
+        }
+    }
+
+    @Override
     public void onInventoryChanged(Vector<Ticket> newInventory) {
         int size = simulatedInventory.size();
 
@@ -736,6 +762,13 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
 
         for(int i = 0; i < observers.size(); i++) {
             observers.get(i).onPhaseChange(phase);
+        }
+    }
+
+    @Override
+    public void onUserMessageChange(String newMessage) {
+        for(int i = 0; i < observers.size(); i++) {
+            observers.get(i).onUserMessageChange(newMessage);
         }
     }
 
@@ -875,11 +908,7 @@ public class StateViewModel extends AndroidViewModel implements StateModelObserv
         return userHelpText;
     }
 
-    public MutableLiveData<String> getModelUserMessage() {
-        return stateModel.getLiveUserMessage();
-    }
-
-    public void setModelContinuable(final boolean continuable) {
+    public void notifyContinuable(final boolean continuable) {
         stateModel.setContinuable(continuable);
     }
 }

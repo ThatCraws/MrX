@@ -54,8 +54,8 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
     private SelectionTracker<Long> tracker = null;
 
     public InventoryAdapter(List<Ticket> inventory) {
-        this.inventory = inventory;
         setHasStableIds(true);
+        this.inventory = inventory;
     }
 
     @Override

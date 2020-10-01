@@ -23,10 +23,12 @@ public interface StateModelObserver {
     void onTimelineEntryMarked(final int position);
 
     // Inventory
+    void onInventoryLoadFirst(final Vector<Ticket> startInventory);
     void onInventoryChanged(final Vector<Ticket> newInventory);
     void onInventoryTicketAdded(final Ticket ticketAdded);
     void onInventoryTicketRemoved(final int position);
 
     // Phase management
     void onPhaseChange(final StateModel.GAME_PHASE phase);
+    void onUserMessageChange(final String newMessage);
 }

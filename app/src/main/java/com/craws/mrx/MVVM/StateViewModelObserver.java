@@ -1,5 +1,7 @@
 package com.craws.mrx.MVVM;
 
+import java.util.Vector;
+
 public interface StateViewModelObserver {
     // Inventory changes
     void onInventoryAdd(final int position);
@@ -14,4 +16,5 @@ public interface StateViewModelObserver {
 
     // Phase changes
     void onPhaseChange(final StateModel.GAME_PHASE phase);
+    void onUserMessageChange(final String newMessage);
 }
