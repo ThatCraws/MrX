@@ -149,14 +149,16 @@ public class GameActivity extends AppCompatActivity implements StateViewModelObs
     @Override
     public void onInventoryAdd(int position) {
         // RecyclerView may only be changed by the Thread that created it
-        runOnUiThread(() -> adapterInv.notifyItemInserted(position));
+        runOnUiThread(() -> {
+            adapterInv.notifyItemInserted(position);
+            adapterInv.notifyDataSetChanged();
+        });
     }
 
     @Override
     public void onInventoryAddAll(int newSize) {
         runOnUiThread(() -> {
             adapterInv.notifyDataSetChanged();
-            //adapterInv.notifyItemRangeInserted(0, newSize);
         });
     }
 
@@ -170,13 +172,16 @@ public class GameActivity extends AppCompatActivity implements StateViewModelObs
 
             if(recInventory.findViewHolderForAdapterPosition(position) != null) {
                 adapterInv.notifyItemRemoved(position);
+                adapterInv.notifyDataSetChanged();
             }
         });
     }
 
     @Override
     public void onInventoryClear(int oldSize) {
-        runOnUiThread(() -> adapterInv.notifyItemRangeRemoved(0, oldSize));
+        runOnUiThread(() -> {
+            adapterInv.notifyDataSetChanged();
+        });
     }
 
 
@@ -190,19 +195,6 @@ public class GameActivity extends AppCompatActivity implements StateViewModelObs
     public void onTimelineTurnMarked(int round) {
         runOnUiThread(() -> {
             RecyclerView.LayoutManager layoutManager = recTimeline.getLayoutManager();
-
-            /*if(layoutManager != null) {
-                View view = layoutManager.findViewByPosition(round);
-                if (view != null) {
-                    view.setBackgroundColor(StateViewModel.markColorCoding[currColorIndex++ % StateViewModel.markColorCoding.length]);
-                } else {
-                    Log.d("DetSpecialActivity", "It happened... ViewByPosition not found. :really_sad_face:");
-                }
-            } else {
-                Log.d("DetSpecialActivity", "It happened... LayoutManager not found.");
-            }
-
-             */
 
             adapterTL.markItem(round, StateViewModel.markColorCoding[currColorIndex++ % StateViewModel.markColorCoding.length]);
         });
